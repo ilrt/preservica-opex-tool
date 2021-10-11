@@ -24,9 +24,6 @@ def output_dir(root, dirs, files):
 
 	source_id.text = base
 
-	#print(f"-- {root}.opex --")
-	#print(f"\tSource id: {base}")
-	#print("\t--- files ---")
 	manifest_elem = ET.SubElement(transfer, f"{{{opex}}}Manifest")
 	files_elem = ET.SubElement(manifest_elem, f"{{{opex}}}Files")
 	for file in files:
@@ -36,13 +33,17 @@ def output_dir(root, dirs, files):
 		content.text = file
 		metadata = ET.SubElement(files_elem, f"{{{opex}}}File", type="metadata")
 		metadata.text = file + ".opex"
-		#print(f"\t\tContent: {file}, Metadata: {file}.opex")
+
 	folders_elem = ET.SubElement(manifest_elem, f"{{{opex}}}Folders")
-	#print("\t--- folders ---")
+	
 	for dir in dirs:
 		folder = ET.SubElement(folders_elem, f"{{{opex}}}Folder")
 		folder.text = dir
-		#print(f"\t\tFolder: {dir}")
+
+	# This item is 'open'
+	properties = ET.SubElement(root_elem, f"{{{opex}}}Properties")
+	sd = ET.SubElement(properties, f"{{{opex}}}SecurityDescriptor")
+	sd.text = "open"
 
 	root_tree = ET.ElementTree(element = root_elem)
 	ET.indent(root_tree)
@@ -60,12 +61,8 @@ def output_file(root, file, files):
 		transfer = ET.SubElement(root_elem, f"{{{opex}}}Transfer")
 		fixities = ET.SubElement(transfer, f"{{{opex}}}Fixities")
 		ET.SubElement(fixities, f"{{{opex}}}Fixity", type="MD5", value=md5)
-		#print(f"\t\tFixity: type md5, value {md5}")
 	else:
 		print(f"\t\tWarning: no md5 for {filename}")
-	properties = ET.SubElement(root_elem, f"{{{opex}}}Properties")
-	sd = ET.SubElement(properties, f"{{{opex}}}SecurityDescriptor")
-	sd.text = "open"
 
 	root_tree = ET.ElementTree(element = root_elem)
 	ET.indent(root_tree)
