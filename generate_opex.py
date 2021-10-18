@@ -49,16 +49,22 @@ def output_dir(root, dirs, files):
 	ET.indent(root_tree)
 	root_tree.write(root + "/" + base + ".opex")
 
+def get_md5(filename):
+	name, ext = splitext(filename)
+	md5file = name + '.md5'
+	if path.exists(md5file):
+		return get_content(md5file)
+	elif path.islink(filename):
+		return get_md5(path.abspath(filename))
+	else:
+		return None
 
 def output_file(root, file, files):
 	root_elem = ET.Element(f"{{{opex}}}OPEXMetadata")
 	filename = join(root, file)
-	name, ext = splitext(file)
-	md5file = name + '.md5'
-	#print(f"\t-- {file}.opex --")
-	if md5file in files:
+	md5 = get_md5(filename)
+	if md5:
 		md5 = get_content(root, md5file)
-		transfer = ET.SubElement(root_elem, f"{{{opex}}}Transfer")
 		fixities = ET.SubElement(transfer, f"{{{opex}}}Fixities")
 		ET.SubElement(fixities, f"{{{opex}}}Fixity", type="MD5", value=md5)
 	else:
