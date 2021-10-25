@@ -29,6 +29,9 @@ def get_source_id(dir):
 		# CALM ids use forward slash, not dash
 		return re.sub('-', '/', path[1])
 
+def is_multi_rep(root, dir):
+	return path.exists(Path(root, dir, 'Representation_Preservation'))
+
 
 def output_properties(root_elem, source_id):
 	# This item is 'open'
@@ -73,8 +76,13 @@ def output_dir(root, dirs, files):
 	folders_elem = ET.SubElement(manifest_elem, f"{{{opex}}}Folders")
 	
 	for dir in dirs:
-		folder = ET.SubElement(folders_elem, f"{{{opex}}}Folder")
-		folder.text = dir
+		if is_multi_rep(root, dir):
+			# This will be zipped up
+			content = ET.SubElement(files_elem, f"{{{opex}}}File", type="content")
+			content.text = dir + '.pax.zip'
+		else:
+			folder = ET.SubElement(folders_elem, f"{{{opex}}}Folder")
+			folder.text = dir
 
 	output_properties(root_elem, source_id)
 
