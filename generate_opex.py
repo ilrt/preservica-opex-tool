@@ -1,10 +1,13 @@
 import os
 import xml.etree.ElementTree as ET
 import os.path as path
+import re
 from pathlib import Path
 
 opex = "http://www.openpreservationexchange.org/opex/v1.0"
 ET.register_namespace("opex", opex)
+legacy = "http://preservica.com/LegacyXIP"
+ET.register_namespace("legacyxip", legacy)
 
 def ignore(file):
 	name, ext = path.splitext(file)
@@ -21,7 +24,25 @@ def get_source_id(dir):
 	if len(path) < 2:
 		return None
 	else:
-		return path[1]
+		# CALM ids use forward slash, not dash
+		return re.sub('-', '/', path[1])
+
+def output_properties(root_elem, source_id):
+	# This item is 'open'
+	properties = ET.SubElement(root_elem, f"{{{opex}}}Properties")
+	sd = ET.SubElement(properties, f"{{{opex}}}SecurityDescriptor")
+	sd.text = "open"
+
+	# CALM id again
+	if source_id:
+		identifiers = ET.SubElement(properties, f"{{{opex}}}Identifiers")
+		identifier = ET.SubElement(identifiers, f"{{{opex}}}Identifier", type='code')
+		identifier.text = source_id
+
+	dm = ET.SubElement(root_elem, f"{{{opex}}}DescriptiveMetadata")
+	lx = ET.SubElement(dm, f"{{{legacy}}}LegacyXIP")
+	ar = ET.SubElement(lx, f"{{{legacy}}}AccessionRef")
+	ar.text = "catalogue"
 
 def output_dir(root, dirs, files):
 	root_elem = ET.Element(f"{{{opex}}}OPEXMetadata")
@@ -51,10 +72,7 @@ def output_dir(root, dirs, files):
 		folder = ET.SubElement(folders_elem, f"{{{opex}}}Folder")
 		folder.text = dir
 
-	# This item is 'open'
-	properties = ET.SubElement(root_elem, f"{{{opex}}}Properties")
-	sd = ET.SubElement(properties, f"{{{opex}}}SecurityDescriptor")
-	sd.text = "open"
+	output_properties(root_elem, source_id)
 
 	root_tree = ET.ElementTree(element = root_elem)
 	ET.indent(root_tree)
@@ -82,6 +100,9 @@ def output_file(root, file, files):
 		ET.SubElement(fixities, f"{{{opex}}}Fixity", type="MD5", value=md5)
 	else:
 		print(f"\t\tWarning: no md5 for {filename}")
+
+	source_id = get_source_id(root)
+	output_properties(root_elem, source_id)
 
 	root_tree = ET.ElementTree(element = root_elem)
 	ET.indent(root_tree)
