@@ -13,9 +13,11 @@ def ignore(file):
 	name, ext = path.splitext(file)
 	return ext in ['.md5', '.opex']
 
+
 def get_content(file):
 	with open(file) as f: s = f.read()
 	return s
+
 
 # We expect the source dir to be already flattened
 # with each item in the root dir with the calm id
@@ -26,6 +28,7 @@ def get_source_id(dir):
 	else:
 		# CALM ids use forward slash, not dash
 		return re.sub('-', '/', path[1])
+
 
 def output_properties(root_elem, source_id):
 	# This item is 'open'
@@ -43,6 +46,7 @@ def output_properties(root_elem, source_id):
 	lx = ET.SubElement(dm, f"{{{legacy}}}LegacyXIP")
 	ar = ET.SubElement(lx, f"{{{legacy}}}AccessionRef")
 	ar.text = "catalogue"
+
 
 def output_dir(root, dirs, files):
 	root_elem = ET.Element(f"{{{opex}}}OPEXMetadata")
@@ -78,6 +82,7 @@ def output_dir(root, dirs, files):
 	ET.indent(root_tree)
 	root_tree.write(root + "/" + base + ".opex")
 
+
 def get_md5(filename):
 	name, ext = path.splitext(filename)
 	md5file = name + '.md5'
@@ -89,6 +94,7 @@ def get_md5(filename):
 		return get_md5(str(target))
 	else:
 		return None
+
 
 def output_file(root, file, files):
 	root_elem = ET.Element(f"{{{opex}}}OPEXMetadata")
@@ -107,6 +113,7 @@ def output_file(root, file, files):
 	root_tree = ET.ElementTree(element = root_elem)
 	ET.indent(root_tree)
 	root_tree.write(filename + ".opex")
+
 
 for root, dirs, files in os.walk('FB-flattened'):
 
