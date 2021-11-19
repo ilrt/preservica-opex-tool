@@ -12,6 +12,55 @@ ET.register_namespace("legacyxip", legacy)
 xip = "http://preservica.com/XIP/v6.3"
 ET.register_namespace("xip", xip)
 
+
+# TAKEN FROM ET SOURCE
+def indent(tree, space="  ", level=0):
+    """Indent an XML document by inserting newlines and indentation space
+    after elements.
+    *tree* is the ElementTree or Element to modify.  The (root) element
+    itself will not be changed, but the tail text of all elements in its
+    subtree will be adapted.
+    *space* is the whitespace to insert for each indentation level, two
+    space characters by default.
+    *level* is the initial indentation level. Setting this to a higher
+    value than 0 can be used for indenting subtrees that are more deeply
+    nested inside of a document.
+    """
+    if isinstance(tree, ET.ElementTree):
+        tree = tree.getroot()
+    if level < 0:
+        raise ValueError(f"Initial indentation level must be >= 0, got {level}")
+    if not len(tree):
+        return
+
+    # Reduce the memory consumption by reusing indentation strings.
+    indentations = ["\n" + level * space]
+
+    def _indent_children(elem, level):
+        # Start a new indentation level for the first child.
+        child_level = level + 1
+        try:
+            child_indentation = indentations[child_level]
+        except IndexError:
+            child_indentation = indentations[level] + space
+            indentations.append(child_indentation)
+
+        if not elem.text or not elem.text.strip():
+            elem.text = child_indentation
+
+        for child in elem:
+            if len(child):
+                _indent_children(child, child_level)
+            if not child.tail or not child.tail.strip():
+                child.tail = child_indentation
+
+        # Dedent after the last child by overwriting the previous indentation.
+        if not child.tail.strip():
+            child.tail = indentations[level]
+
+    _indent_children(tree, 0)
+
+
 def ignore(file):
 	name, ext = path.splitext(file)
 	return ext in ['.md5', '.opex', '.xip']
@@ -101,6 +150,7 @@ def output_dir(root, dirs, files):
 			# This describes the zip (how do we otherwise link to catalogue?)
 			metadata = ET.SubElement(files_elem, f"{{{opex}}}File", type="metadata")
 			metadata.text = dir + '.pax.zip.opex'
+			output_pax_file(root, dir + '.pax.zip')
 		else:
 			folder = ET.SubElement(folders_elem, f"{{{opex}}}Folder")
 			folder.text = dir
@@ -108,7 +158,7 @@ def output_dir(root, dirs, files):
 	output_properties(root_elem, base, level)
 
 	root_tree = ET.ElementTree(element = root_elem)
-	ET.indent(root_tree)
+	indent(root_tree)
 	root_tree.write(root + "/" + base + ".opex")
 
 
@@ -123,6 +173,17 @@ def get_md5(filename):
 		return get_md5(str(target))
 	else:
 		return None
+
+def output_pax_file(root, file):
+
+	root_elem = ET.Element(f"{{{opex}}}OPEXMetadata")
+	filename = path.join(root, file)
+	
+	output_properties(root_elem, path.basename(root), 2)
+
+	root_tree = ET.ElementTree(element = root_elem)
+	indent(root_tree)
+	root_tree.write(filename + ".opex")
 
 
 def output_file(root, file):
@@ -141,8 +202,11 @@ def output_file(root, file):
 	else:
 		print(f"\t\tWarning: no md5 for {filename}")
 
+	props = subelem(root_elem, opex, 'Properties')
+	subelem(props, opex, 'SecurityDescriptor', 'open')
+
 	root_tree = ET.ElementTree(element = root_elem)
-	ET.indent(root_tree)
+	indent(root_tree)
 	root_tree.write(filename + ".opex")
 
 
@@ -263,7 +327,7 @@ def create_xip(folder, item_id):
 
 	root_tree = ET.ElementTree(element = root_elem)
 
-	ET.indent(root_tree)
+	indent(root_tree)
 
 	root_tree.write(path.join(folder, item_id + '.xip'))
 
