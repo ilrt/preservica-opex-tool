@@ -24,53 +24,61 @@ def get_content(file):
 
 # We expect the source dir to be already flattened
 # with each item in the root dir with the calm id
-def get_source_id(dir):
-	path = Path(dir).parts
-	if len(path) < 2:
-		return None
-	else:
-		# CALM ids use forward slash, not dash
-		return re.sub('-', '/', path[1])
+def to_calm_id(basename):
+	# CALM ids use forward slash, not dash
+	return re.sub('-', '/', basename)
 
 
 def remove_top(file_path):
 	path_parts = Path(file_path).parts
-	return path.join(*path_parts[1:])
+	return path.join(*path_parts[2:])
+
+
+def get_level(dir):
+	return len(Path(dir).parts) - 1
+
+
+def in_pax(dir):
+	return '/Representation' in dir
+
+
+def is_multi_rep1(root):
+	return path.exists(Path(root, 'Representation_Preservation'))
 
 
 def is_multi_rep(root, dir):
 	return path.exists(Path(root, dir, 'Representation_Preservation'))
 
 
-def output_properties(root_elem, source_id):
+def output_properties(root_elem, code, level):
 	# This item is 'open'
 	properties = ET.SubElement(root_elem, f"{{{opex}}}Properties")
 	sd = ET.SubElement(properties, f"{{{opex}}}SecurityDescriptor")
 	sd.text = "open"
 
-	# CALM id again
-	if source_id:
-		identifiers = ET.SubElement(properties, f"{{{opex}}}Identifiers")
-		identifier = ET.SubElement(identifiers, f"{{{opex}}}Identifier", type='code')
-		identifier.text = source_id
-
-	dm = ET.SubElement(root_elem, f"{{{opex}}}DescriptiveMetadata")
-	lx = ET.SubElement(dm, f"{{{legacy}}}LegacyXIP")
-	ar = ET.SubElement(lx, f"{{{legacy}}}AccessionRef")
-	ar.text = "catalogue"
+	if level in [1,2]:
+		dm = subelem(root_elem, opex, 'DescriptiveMetadata')
+		lx = subelem(dm, legacy, 'LegacyXIP')
+		if level == 2:
+			subelem(lx, legacy, 'AccessionRef', 'catalogue')
+		else:
+			subelem(lx, legacy, 'Virtual', 'true')
+		subelem(lx, legacy, 'Code', to_calm_id(code))
 
 
 def output_dir(root, dirs, files):
+
+	pax = is_multi_rep1(root)  # Are we in something that will be a pax?
+	level = get_level(root)  # How far down are we?
+
+	if pax and level == 2:
+		# No opex at top level of pax
+		return
+
 	root_elem = ET.Element(f"{{{opex}}}OPEXMetadata")
 	transfer = ET.SubElement(root_elem, f"{{{opex}}}Transfer")
 
 	base = path.basename(root)
-
-	source_id = get_source_id(root)
-
-	if source_id:
-		source_id_elem = ET.SubElement(transfer, f"{{{opex}}}SourceID")
-		source_id_elem.text = source_id
 
 	manifest_elem = ET.SubElement(transfer, f"{{{opex}}}Manifest")
 	files_elem = ET.SubElement(manifest_elem, f"{{{opex}}}Files")
@@ -90,11 +98,14 @@ def output_dir(root, dirs, files):
 			content = ET.SubElement(files_elem, f"{{{opex}}}File", type="content")
 			content.text = dir + '.pax.zip'
 			create_xip(path.join(root, dir), dir)
+			# This describes the zip (how do we otherwise link to catalogue?)
+			metadata = ET.SubElement(files_elem, f"{{{opex}}}File", type="metadata")
+			metadata.text = dir + '.pax.zip.opex'
 		else:
 			folder = ET.SubElement(folders_elem, f"{{{opex}}}Folder")
 			folder.text = dir
 
-	output_properties(root_elem, source_id)
+	output_properties(root_elem, base, level)
 
 	root_tree = ET.ElementTree(element = root_elem)
 	ET.indent(root_tree)
@@ -114,7 +125,12 @@ def get_md5(filename):
 		return None
 
 
-def output_file(root, file, files):
+def output_file(root, file):
+
+	if in_pax(root):
+		# Skip opex in pax
+		return
+
 	root_elem = ET.Element(f"{{{opex}}}OPEXMetadata")
 	filename = path.join(root, file)
 	md5 = get_md5(filename)
@@ -124,9 +140,6 @@ def output_file(root, file, files):
 		ET.SubElement(fixities, f"{{{opex}}}Fixity", type="MD5", value=md5)
 	else:
 		print(f"\t\tWarning: no md5 for {filename}")
-
-	source_id = get_source_id(root)
-	output_properties(root_elem, source_id)
 
 	root_tree = ET.ElementTree(element = root_elem)
 	ET.indent(root_tree)
@@ -193,7 +206,6 @@ def create_generation(root_elem, folder, subfolder, content_id,
 
 
 def create_bitstream(root_elem, folder, bitstream):
-	print(bitstream)
 	filename = path.basename(bitstream)
 	dirname = remove_top(path.dirname(bitstream))
 	size = path.getsize(bitstream)
@@ -255,7 +267,6 @@ def create_xip(folder, item_id):
 
 	root_tree.write(path.join(folder, item_id + '.xip'))
 
-
 for root, dirs, files in os.walk('FB-flattened'):
 
 	output_dir(root, dirs, files)
@@ -266,6 +277,6 @@ for root, dirs, files in os.walk('FB-flattened'):
 		if ignore(file):
 			continue
 		else:
-			output_file(root, file, files)
+			output_file(root, file)
 
 print("Finished")
