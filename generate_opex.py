@@ -106,13 +106,16 @@ def output_properties(root_elem, code, level):
 	sd.text = "open"
 
 	if level in [1,2]:
+
+		ids = subelem(properties, opex, 'Identifiers')
+		id_elem = subelem(ids, opex, 'Identifier', text=to_calm_id(code), type='code')
+
 		dm = subelem(root_elem, opex, 'DescriptiveMetadata')
 		lx = subelem(dm, legacy, 'LegacyXIP')
 		if level == 2:
 			subelem(lx, legacy, 'AccessionRef', 'catalogue')
 		else:
 			subelem(lx, legacy, 'Virtual', 'true')
-		subelem(lx, legacy, 'Code', to_calm_id(code))
 
 
 def output_dir(root, dirs, files):
@@ -214,8 +217,8 @@ def elem(ns, tag):
 	return ET.Element(f"{{{ns}}}{tag}")
 
 
-def subelem(parent, ns, tag, text = None):
-	elem = ET.SubElement(parent, f"{{{ns}}}{tag}")
+def subelem(parent, ns, tag, text = None, **kwargs):
+	elem = ET.SubElement(parent, f"{{{ns}}}{tag}", **kwargs)
 
 	if text:
 		elem.text = text
