@@ -4,6 +4,7 @@ import os.path as path
 import re
 from pathlib import Path
 import uuid
+import sys
 
 opex = "http://www.openpreservationexchange.org/opex/v1.0"
 ET.register_namespace("opex", opex)
@@ -334,7 +335,15 @@ def create_xip(folder, item_id):
 
 	root_tree.write(path.join(folder, item_id + '.xip'))
 
-for root, dirs, files in os.walk('FB-flattened'):
+if len(sys.argv) < 2:
+	print("Please provide a directory name")
+	sys.exit(1)
+
+source = sys.argv[1]
+
+print(f"Walking directory {source}")
+
+for root, dirs, files in os.walk(source):
 
 	output_dir(root, dirs, files)
 
