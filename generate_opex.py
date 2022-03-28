@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 import uuid
 import sys
+import datetime
 
 opex = "http://www.openpreservationexchange.org/opex/v1.0"
 ET.register_namespace("opex", opex)
@@ -241,11 +242,11 @@ def create_representation(root_elem, name, parent_id, item_id, is_pres):
 	subelem(rep, xip, 'RepresentationProperties')
 
 
-def create_content(root_elem, parent_id, content_id):
+def create_content(root_elem, parent_id, content_id, name):
 	cont_obj = subelem(root_elem, xip, 'ContentObject')
 
 	subelem(cont_obj, xip, 'Ref', content_id)
-	subelem(cont_obj, xip, 'Title', 'Title')
+	subelem(cont_obj, xip, 'Title', name)
 	subelem(cont_obj, xip, 'SecurityTag', 'open')
 	subelem(cont_obj, xip, 'Parent', parent_id)
 
@@ -262,7 +263,7 @@ def create_generation(root_elem, folder, subfolder, content_id,
 			original = original, active = 'true')
 
 	subelem(gen_elem, xip, 'ContentObject', content_id)
-	subelem(gen_elem, xip, 'EffectiveDate', '????')
+	subelem(gen_elem, xip, 'EffectiveDate', datetime.date.today().isoformat())
 
 	bs_elem = subelem(gen_elem, xip, 'Bitstreams')
 	for f in os.listdir(path.join(folder, subfolder)):
@@ -315,8 +316,8 @@ def create_xip(folder, item_id):
 	create_representation(root_elem, 'Representation_Access',
 		ref_id, acc_content_id, is_pres = False)
 
-	create_content(root_elem, ref_id, pres_content_id)
-	create_content(root_elem, ref_id, acc_content_id)
+	create_content(root_elem, ref_id, pres_content_id, 'Presentation content')
+	create_content(root_elem, ref_id, acc_content_id, 'Access content')
 
 	bitstreams = []
 
