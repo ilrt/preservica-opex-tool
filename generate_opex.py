@@ -230,7 +230,7 @@ def subelem(parent, ns, tag, text = None, **kwargs):
 
 def create_representation(root_elem, name, parent_id, item_id, is_pres):
 	rep = subelem(root_elem, xip, 'Representation')
-	subelem(rep, xip, 'Ref', parent_id)
+	subelem(rep, xip, 'InformationObject', parent_id)
 	subelem(rep, xip, 'Name', name)
 	if is_pres:
 		subelem(rep, xip, 'Type', 'Preservation')
