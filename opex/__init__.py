@@ -81,30 +81,15 @@ def to_calm_id(basename):
 
 
 def remove_top(file_path):
+	print(f"Remove top! {file_path}")
 	path_parts = Path(file_path).parts
-	return path.join(*path_parts[2:])
-
-
-def get_level(dir):
-	return len(Path(dir).parts) - 1
-
-
-def in_pax(dir):
-	return '/Representation' in dir
-
-
-def is_multi_rep1(root):
-	return path.exists(Path(root, 'Representation_Preservation'))
-
-
-def is_multi_rep(root, dir):
-	return path.exists(Path(root, dir, 'Representation_Preservation'))
-
+	return path.join(*path_parts[3:])
+	
 
 def output_properties(root_elem, code, level):
 	# This item is 'open'
-	properties = ET.SubElement(root_elem, f"{{{opex}}}Properties")
-	sd = ET.SubElement(properties, f"{{{opex}}}SecurityDescriptor")
+	properties = subelem(root_elem, opex, 'Properties')
+	sd = subelem(properties, opex, 'SecurityDescriptor')
 	sd.text = "open"
 
 	if level in [1,2]:
@@ -120,17 +105,10 @@ def output_properties(root_elem, code, level):
 			subelem(lx, legacy, 'Virtual', 'true')
 
 
-def output_dir(root, dirs, files):
+def output_dir(root, dirs, files, level):
 
-	pax = is_multi_rep1(root)  # Are we in something that will be a pax?
-	level = get_level(root)  # How far down are we?
-
-	if pax and level == 2:
-		# No opex at top level of pax
-		return
-
-	root_elem = ET.Element(f"{{{opex}}}OPEXMetadata")
-	transfer = ET.SubElement(root_elem, f"{{{opex}}}Transfer")
+	root_elem = elem(opex, 'OPEXMetadata')
+	transfer = subelem(root_elem, opex, 'Transfer')
 
 	base = path.basename(root)
 
@@ -147,15 +125,15 @@ def output_dir(root, dirs, files):
 	folders_elem = ET.SubElement(manifest_elem, f"{{{opex}}}Folders")
 	
 	for dir in dirs:
-		if is_multi_rep(root, dir):
+		if dir.endswith('.pax'):
 			# This will be zipped up
 			content = ET.SubElement(files_elem, f"{{{opex}}}File", type="content")
-			content.text = dir + '.pax.zip'
-			create_xip(path.join(root, dir), dir)
+			content.text = dir + '.zip'
+			create_xip(path.join(root, dir), dir[:-4]) # remove .pax
 			# This describes the zip (how do we otherwise link to catalogue?)
 			metadata = ET.SubElement(files_elem, f"{{{opex}}}File", type="metadata")
-			metadata.text = dir + '.pax.zip.opex'
-			output_pax_file(root, dir + '.pax.zip')
+			metadata.text = dir + '.zip.opex'
+			output_pax_file(root, dir + '.zip')
 		else:
 			folder = ET.SubElement(folders_elem, f"{{{opex}}}Folder")
 			folder.text = dir
@@ -184,7 +162,9 @@ def output_pax_file(root, file):
 	root_elem = ET.Element(f"{{{opex}}}OPEXMetadata")
 	filename = path.join(root, file)
 	
-	output_properties(root_elem, path.basename(root), 2)
+	code = file[:-8] # remove .pax.zip
+
+	output_properties(root_elem, code, 2)
 
 	root_tree = ET.ElementTree(element = root_elem)
 	indent(root_tree)
@@ -192,10 +172,6 @@ def output_pax_file(root, file):
 
 
 def output_file(root, file):
-
-	if in_pax(root):
-		# Skip opex in pax
-		return
 
 	root_elem = ET.Element(f"{{{opex}}}OPEXMetadata")
 	filename = path.join(root, file)
@@ -270,13 +246,14 @@ def create_generation(root_elem, folder, subfolder, content_id,
 		if ignore(f):
 			continue
 		file_path = path.join(folder, subfolder, f)
-		subelem(bs_elem, xip, 'Bitstream', remove_top(file_path))
+		subelem(bs_elem, xip, 'Bitstream', path.join(subfolder, f))
 		bitstreams.append(file_path)
 
 
 def create_bitstream(root_elem, folder, bitstream):
 	filename = path.basename(bitstream)
-	dirname = remove_top(path.dirname(bitstream))
+	# Get the dir bit of the full path to the file, minus the containing pax folder
+	dirname = path.dirname(path.relpath(bitstream, folder))
 	size = path.getsize(bitstream)
 	md5 = get_md5(bitstream)
 
@@ -335,25 +312,3 @@ def create_xip(folder, item_id):
 	indent(root_tree)
 
 	root_tree.write(path.join(folder, item_id + '.xip'))
-
-if len(sys.argv) < 2:
-	print("Please provide a directory name")
-	sys.exit(1)
-
-source = sys.argv[1]
-
-print(f"Walking directory {source}")
-
-for root, dirs, files in os.walk(source):
-
-	output_dir(root, dirs, files)
-
-	id = path.basename(root)
-
-	for file in files:
-		if ignore(file):
-			continue
-		else:
-			output_file(root, file)
-
-print("Finished")
