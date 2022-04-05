@@ -78,12 +78,6 @@ def get_content(file):
 def to_calm_id(basename):
 	# CALM ids use forward slash, not dash
 	return re.sub('-', '/', basename)
-
-
-def remove_top(file_path):
-	print(f"Remove top! {file_path}")
-	path_parts = Path(file_path).parts
-	return path.join(*path_parts[3:])
 	
 
 def output_properties(root_elem, code, level):

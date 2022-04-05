@@ -3,14 +3,6 @@ import sys
 import re
 import opex
 
-if len(sys.argv) != 4:
-	print("Usage: flatten_dir source_dir target_dir transfer_file")
-	sys.exit(1)
-
-source = sys.argv[1]
-target = sys.argv[2]
-transfer_file = sys.argv[3]
-
 def need_transfer(files):
 	for filename in files:
 		if filename in for_transfer:
@@ -53,9 +45,9 @@ def list_dir(dir):
 	dirs = []
 
 	for entry in os.scandir(dir):
-		if entry.is_dir:
+		if entry.is_dir():
 			dirs.append(entry.name)
-		elif entry.is_file:
+		elif entry.is_file():
 			files.append(entry.name)
 
 	return files, dirs
@@ -63,66 +55,72 @@ def list_dir(dir):
 
 
 def main(argv):
-	if len(argv) != 4:
-		print("Usage: flatten_dir source_dir target_dir transfer_file")
+
+	if len(argv) < 4:
+		print("Usage: flatten_dir target_dir transfer_file source_dirs*")
 		sys.exit(1)
 
 	source = argv[1]
-	target = argv[2]
-	transfer_file = argv[3]
+	target = argv[1]
+	transfer_file = argv[2]
+	sources = argv[3:]
 
 	global for_transfer
 
 	with open(transfer_file) as tf:
 		for_transfer = set(line.rstrip() for line in tf.readlines())
 
-	print(f"Flatten {source} to {target}")
+	print(f"Flatten {sources} to {target}")
 
 	opex_dirs = { target: 0 } # level 0 entry
 	pax_dirs = set()
 
-	for root, dirs, files in os.walk(source):
-		print(f"in {root}")
 
-		# Change: 
-		# Look at each file
-		# Check whether extension is something we are interested in
-		# If so check whether id in list of things to transfer
-		# If all correct:
-		# Get parent id and asset id from root
-		# See whether preservation or access in there
-		# At this point make dir tree and link file
-		# Doesn't cover case where pres and access are siblings
-		
-		for file in files:
-
-			parent, asset_id, file_ext = get_id(file)
-
-			if asset_id and right_type(file_ext):
-
-				targetdir, paxdir = get_target_dir(target, root, parent, asset_id)
-
-				os.makedirs(targetdir, exist_ok=True)
-
-				sourcedir = os.path.relpath(root, targetdir)
-
-				# is there a nicer way to make this relative link?
-				cwd = os.getcwd()
-				os.chdir(targetdir)
-				os.symlink(os.path.join(sourcedir, file), file)
-				os.chdir(cwd)
-
-				if paxdir:
-					pax_dirs.add(paxdir)
-				else:
-					opex_dirs[targetdir] = 2  # Bottom level dir
-
-				opex_dirs[os.path.join(target, parent)] = 1  # Virtual
+	for source in sources:
+		for root, dirs, files in os.walk(source):
+			print(f"in {root}")
+	
+			# Change: 
+			# Look at each file
+			# Check whether extension is something we are interested in
+			# If so check whether id in list of things to transfer
+			# If all correct:
+			# Get parent id and asset id from root
+			# See whether preservation or access in there
+			# At this point make dir tree and link file
+			# Doesn't cover case where pres and access are siblings
+			
+			for file in files:
+	
+				parent, asset_id, file_ext = get_id(file)
+	
+				if asset_id and right_type(file_ext):
+	
+					targetdir, paxdir = get_target_dir(target, root, parent, asset_id)
+	
+					os.makedirs(targetdir, exist_ok=True)
+	
+					sourcedir = os.path.relpath(root, targetdir)
+	
+					# is there a nicer way to make this relative link?
+					cwd = os.getcwd()
+					os.chdir(targetdir)
+					os.symlink(os.path.join(sourcedir, file), file)
+					os.chdir(cwd)
+	
+					if paxdir:
+						pax_dirs.add(paxdir)
+					else:
+						opex_dirs[targetdir] = 2  # Bottom level dir
+	
+					opex_dirs[os.path.join(target, parent)] = 1  # Virtual
 
 	for opex_dir, level in opex_dirs.items():
-		print(f"Opex: {opex_dir}")
 
 		files, dirs = list_dir(opex_dir)
+
+		for file in files:
+			opex.output_file(opex_dir, file)
 
 		opex.output_dir(opex_dir, dirs, files, level)
 
