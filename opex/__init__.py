@@ -6,6 +6,7 @@ from pathlib import Path
 import uuid
 import sys
 import datetime
+import hashlib
 
 opex = "http://www.openpreservationexchange.org/opex/v1.0"
 ET.register_namespace("opex", opex)
@@ -149,7 +150,15 @@ def get_md5(filename):
 		target = link.resolve()
 		return get_md5(str(target))
 	else:
-		return None
+		# generate md5 from content
+		print(f"\t\tWarning: no md5 for {filename}, generating...")
+		with open(filename, "rb") as f:
+			file_hash = hashlib.md5()
+			chunk = f.read(8192)
+			while chunk:
+        		file_hash.update(chunk)
+        		chunk = f.read(8192)
+  			return file_hash.hexdigest()
 
 def output_pax_file(root, file):
 
