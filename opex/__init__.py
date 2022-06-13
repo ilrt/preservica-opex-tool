@@ -156,9 +156,9 @@ def get_md5(filename):
 			file_hash = hashlib.md5()
 			chunk = f.read(8192)
 			while chunk:
-        		file_hash.update(chunk)
-        		chunk = f.read(8192)
-  			return file_hash.hexdigest()
+				file_hash.update(chunk)
+				chunk = f.read(8192)
+			return file_hash.hexdigest()
 
 def output_pax_file(root, file):
 
