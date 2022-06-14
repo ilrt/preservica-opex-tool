@@ -86,8 +86,6 @@ def main(argv):
 	
 					targetdir, paxdir, is_preserve = get_target_dir(target, root, parent, asset_id)
 
-					print(f"Target: {targetdir}, paxdir: {paxdir}")
-
 					sourcedir = os.path.relpath(root, targetdir)
 	
 					if paxdir:
@@ -95,9 +93,9 @@ def main(argv):
 							os.makedirs(os.path.dirname(paxdir), exist_ok=True)  # ensure parent dir storing zip exists
 							zip = zipfile.ZipFile(paxdir, mode='x', compression=zipfile.ZIP_STORED, compresslevel=None)
 							entries = []
-							pax_zips[paxdir] = (zip, entries)
+							pax_zips[paxdir] = (zip, entries, asset_id)
 						else:
-							zip, entries = pax_zips[paxdir]
+							zip, entries, asset_id_stored = pax_zips[paxdir]
 						print(root, file)
 						zip.write(os.path.join(root, file), arcname=os.path.join(targetdir, file))
 						entries.append((os.path.join(root, file), os.path.join(targetdir, file), is_preserve))
@@ -113,19 +111,20 @@ def main(argv):
 	
 					opex_dirs[os.path.join(target, parent)] = 1  # Virtual
 
+	# Complete zip/pax with xip description and close
+	for zip, entries, asset_id in pax_zips.values():
+		xip = opex.create_xip(asset_id, entries)
+		zip.writestr(asset_id + '.xip', ET.tostring(xip.getroot()))
+		zip.close()
+
+	# Finally generate opex files
 	for opex_dir, level in opex_dirs.items():
-
 		files, dirs = list_dir(opex_dir)
-
 		for file in files:
 			opex.output_file(opex_dir, file)
 
 		opex.output_dir(opex_dir, dirs, files, level)
 
-	for zip, entries in pax_zips.values():
-		xip = opex.create_xip(asset_id, entries)
-		zip.writestr(asset_id + '.xip', ET.tostring(xip.getroot()))
-		zip.close()
 
 if __name__=="__main__":
 	main(sys.argv)
