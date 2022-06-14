@@ -120,18 +120,8 @@ def output_dir(root, dirs, files, level):
 	folders_elem = ET.SubElement(manifest_elem, f"{{{opex}}}Folders")
 	
 	for dir in dirs:
-		if dir.endswith('.pax'):
-			# This will be zipped up
-			content = ET.SubElement(files_elem, f"{{{opex}}}File", type="content")
-			content.text = dir + '.zip'
-			create_xip(path.join(root, dir), dir[:-4]) # remove .pax
-			# This describes the zip (how do we otherwise link to catalogue?)
-			metadata = ET.SubElement(files_elem, f"{{{opex}}}File", type="metadata")
-			metadata.text = dir + '.zip.opex'
-			output_pax_file(root, dir + '.zip')
-		else:
-			folder = ET.SubElement(folders_elem, f"{{{opex}}}Folder")
-			folder.text = dir
+		folder = ET.SubElement(folders_elem, f"{{{opex}}}Folder")
+		folder.text = dir
 
 	output_properties(root_elem, base, level)
 
@@ -230,8 +220,7 @@ def create_content(root_elem, parent_id, content_id, name):
 	subelem(cont_obj, xip, 'Parent', parent_id)
 
 
-def create_generation(root_elem, folder, subfolder, content_id,
-	bitstreams, is_pres):
+def create_generation(root_elem, entries, content_id, is_pres):
 
 	if is_pres:
 		original = 'true'
@@ -245,20 +234,16 @@ def create_generation(root_elem, folder, subfolder, content_id,
 	subelem(gen_elem, xip, 'EffectiveDate', datetime.date.today().isoformat())
 
 	bs_elem = subelem(gen_elem, xip, 'Bitstreams')
-	for f in os.listdir(path.join(folder, subfolder)):
-		if ignore(f):
-			continue
-		file_path = path.join(folder, subfolder, f)
-		subelem(bs_elem, xip, 'Bitstream', path.join(subfolder, f))
-		bitstreams.append(file_path)
+
+	for source, zip_location, is_preserve in entries:
+		subelem(bs_elem, xip, 'Bitstream', zip_location)
 
 
-def create_bitstream(root_elem, folder, bitstream):
-	filename = path.basename(bitstream)
-	# Get the dir bit of the full path to the file, minus the containing pax folder
-	dirname = path.dirname(path.relpath(bitstream, folder))
-	size = path.getsize(bitstream)
-	md5 = get_md5(bitstream)
+def create_bitstream(root_elem, source, zip_location):
+	filename = path.basename(zip_location)
+	dirname = path.dirname(zip_location)
+	size = path.getsize(source)
+	md5 = get_md5(source)
 
 	bs_elem = subelem(root_elem, xip, 'Bitstream')
 	subelem(bs_elem, xip, 'Filename', filename)
@@ -274,8 +259,7 @@ def create_bitstream(root_elem, folder, bitstream):
 		print(f"\t\tWarning: no md5 for {bitstream}")
 
 
-def create_xip(folder, item_id):
-	print(f"Folder is {folder}")
+def create_xip(asset_id, entries):
 	"""Create a xip file to go in the pax file"""
 	root_elem = elem(xip, "XIP")
 
@@ -284,7 +268,7 @@ def create_xip(folder, item_id):
 	ref_id = str(uuid.uuid4())
 	subelem(info_obj, xip, 'Ref', ref_id)
 
-	subelem(info_obj, xip, 'Title', item_id)
+	subelem(info_obj, xip, 'Title', asset_id)
 
 	subelem(info_obj, xip, 'SecurityTag', 'open')
 
@@ -299,19 +283,18 @@ def create_xip(folder, item_id):
 	create_content(root_elem, ref_id, pres_content_id, 'Presentation content')
 	create_content(root_elem, ref_id, acc_content_id, 'Access content')
 
-	bitstreams = []
+	# Group entries by preservation and access
+	pres_entries = [(source, zip_location, is_preserve) for source, zip_location, is_preserve in entries if is_preserve]
+	access_entries = [(source, zip_location, is_preserve) for source, zip_location, is_preserve in entries if not is_preserve]
 
-	create_generation(root_elem, folder, 'Representation_Preservation', 
-		pres_content_id, bitstreams, is_pres = True)
+	create_generation(root_elem, pres_entries, pres_content_id, is_pres = True)
+	create_generation(root_elem, access_entries, acc_content_id, is_pres = False)
 
-	create_generation(root_elem, folder, 'Representation_Access', 
-		acc_content_id, bitstreams, is_pres = False)
-
-	for bitstream in bitstreams:
-		create_bitstream(root_elem, folder, bitstream)
+	for source, zip_location, is_preserve in entries:
+		create_bitstream(root_elem, source, zip_location)
 
 	root_tree = ET.ElementTree(element = root_elem)
 
 	indent(root_tree)
 
-	root_tree.write(path.join(folder, item_id + '.xip'))
+	return root_tree
