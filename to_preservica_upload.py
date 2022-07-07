@@ -64,7 +64,7 @@ def main(argv):
 		if not os.path.isdir(target):
 			print(f"Target {target} already exists and is not a directory")
 			sys.exit(1)
-		elif os.path.listdir(path):
+		elif os.listdir(target):
 			print(f"Target {target} already exists and isn't empty")
 			sys.exit(1)
 
@@ -130,8 +130,8 @@ def main(argv):
 	for opex_dir, level in opex_dirs.items():
 		files, dirs = list_dir(opex_dir)
 		for file in files:
-			if file.endwith('.pax.zip'):
-				opex.output_pax_file(opendir, file)
+			if file.endswith('.pax.zip'):
+				opex.output_pax_file(opex_dir, file)
 			else:
 				opex.output_file(opex_dir, file)
 
