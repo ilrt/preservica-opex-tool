@@ -59,7 +59,16 @@ def main(argv):
 	target = argv[1]
 	sources = argv[2:]
 
-	print(f"Flatten {sources} to {target}")
+	# Check target either doesn't exist, or is an empty dir
+	if os.path.exists(target):
+		if not os.path.isdir(target):
+			print(f"Target {target} already exists and is not a directory")
+			sys.exit(1)
+		elif os.path.listdir(path):
+			print(f"Target {target} already exists and isn't empty")
+			sys.exit(1)
+
+	print(f"Preparing {sources} in {target} for preservica upload")
 
 	opex_dirs = { target: 0 } # level 0 entry
 	pax_zips = {}
@@ -121,7 +130,10 @@ def main(argv):
 	for opex_dir, level in opex_dirs.items():
 		files, dirs = list_dir(opex_dir)
 		for file in files:
-			opex.output_file(opex_dir, file)
+			if file.endwith('.pax.zip'):
+				opex.output_pax_file(opendir, file)
+			else:
+				opex.output_file(opex_dir, file)
 
 		opex.output_dir(opex_dir, dirs, files, level)
 
