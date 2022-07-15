@@ -23,15 +23,14 @@ def get_id(filename):
 
 
 def get_target_dir(target, root, parent, asset):
+	# TODO this is backwards: first item returned should be real path, then internal zip path
 	# If we're in a multirep dir tack on relevant bottom dir
 	if "Preservica_preservation" in root:
-		asset = asset + '.pax.zip'
 		return 'Representation_Preservation', \
-			os.path.join(target, parent, asset), True
+			os.path.join(target, parent, asset, asset + '.pax.zip'), True
 	elif "Preservica_presentation" in root:
-		asset = asset + '.pax.zip'
 		return 'Representation_Access', \
-			os.path.join(target, parent, asset), False
+			os.path.join(target, parent, asset, asset + '.pax.zip'), False
 	else:
 		return os.path.join(target, parent, asset), None, None
 
@@ -105,9 +104,10 @@ def main(argv):
 							pax_zips[paxdir] = (zip, entries, asset_id)
 						else:
 							zip, entries, asset_id_stored = pax_zips[paxdir]
-						print(root, file)
+						#print(root, file)
 						zip.write(os.path.join(root, file), arcname=os.path.join(targetdir, file))
 						entries.append((os.path.join(root, file), os.path.join(targetdir, file), is_preserve))
+						opex_dirs[os.path.dirname(paxdir)] = 2  # Bottom level dir
 					else:
 						os.makedirs(targetdir, exist_ok=True)  # ensure target exists
 						# symlink to original
@@ -130,10 +130,7 @@ def main(argv):
 	for opex_dir, level in opex_dirs.items():
 		files, dirs = list_dir(opex_dir)
 		for file in files:
-			if file.endswith('.pax.zip'):
-				opex.output_pax_file(opex_dir, file)
-			else:
-				opex.output_file(opex_dir, file)
+			opex.output_file(opex_dir, file)
 
 		opex.output_dir(opex_dir, dirs, files, level)
 
