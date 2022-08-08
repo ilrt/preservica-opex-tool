@@ -110,11 +110,11 @@ def main(argv):
 						opex_dirs[os.path.dirname(paxdir)] = 2  # Bottom level dir
 					else:
 						os.makedirs(targetdir, exist_ok=True)  # ensure target exists
-						# symlink to original
+						# link to original
 						# is there a nicer way to make this relative link?
 						cwd = os.getcwd()
 						os.chdir(targetdir)
-						os.symlink(os.path.join(sourcedir, file), file)
+						os.link(os.path.join(sourcedir, file), file)
 						os.chdir(cwd)
 						opex_dirs[targetdir] = 2  # Bottom level dir
 	
