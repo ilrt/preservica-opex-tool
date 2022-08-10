@@ -220,6 +220,11 @@ def create_content(root_elem, parent_id, content_id, name):
 	subelem(cont_obj, xip, 'Parent', parent_id)
 
 
+def to_unix(path):
+	"""Take path, return a unix path (sloppy, but ok)"""
+	return path.replace("\\","/")
+
+
 def create_generation(root_elem, entries, content_id, is_pres):
 
 	if is_pres:
@@ -236,7 +241,8 @@ def create_generation(root_elem, entries, content_id, is_pres):
 	bs_elem = subelem(gen_elem, xip, 'Bitstreams')
 
 	for source, zip_location, is_preserve in entries:
-		subelem(bs_elem, xip, 'Bitstream', zip_location)
+		# Use unix path for location
+		subelem(bs_elem, xip, 'Bitstream', to_unix(zip_location))
 
 
 def create_bitstream(root_elem, source, zip_location):
