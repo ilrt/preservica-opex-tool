@@ -71,7 +71,7 @@ def ignore(file):
 
 def get_content(file):
 	with open(file) as f: s = f.read()
-	return s
+	return s.strip()
 
 
 # We expect the source dir to be already flattened
