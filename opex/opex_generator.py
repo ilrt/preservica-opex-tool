@@ -14,16 +14,14 @@ legacy = "http://preservica.com/LegacyXIP"
 ET.register_namespace("legacyxip", legacy)
 
 
-def output_properties(root_elem, name, not_virtual):
+def output_properties(root_elem, id, not_virtual):
     # This item is 'open'
     properties = subelem(root_elem, opex, 'Properties')
     sd = subelem(properties, opex, 'SecurityDescriptor')
     sd.text = "open"
 
-    # if level in [1,2]:
-
     ids = subelem(properties, opex, 'Identifiers')
-    id_elem = subelem(ids, opex, 'Identifier', text=name,  # Calm id?
+    id_elem = subelem(ids, opex, 'Identifier', text=id,
                       type='code')
 
     dm = subelem(root_elem, opex, 'DescriptiveMetadata')
@@ -34,29 +32,29 @@ def output_properties(root_elem, name, not_virtual):
         subelem(lx, legacy, 'Virtual', 'true')
 
 
-def output_dir(name, dirs, files):
+def output_dir(name, id, dirs, files):
 
     root_elem = elem(opex, 'OPEXMetadata')
     transfer = subelem(root_elem, opex, 'Transfer')
 
-    manifest_elem = ET.SubElement(transfer, f"{{{opex}}}Manifest")
-    files_elem = ET.SubElement(manifest_elem, f"{{{opex}}}Files")
+    manifest_elem = subelem(transfer, opex, 'Manifest')
+    files_elem = subelem(manifest_elem, opex, 'Files')
     for filename, fileinfo in files.items():
         if fileinfo.is_metadata:
             type = 'metadata'
         else:
             type = 'content'
 
-        content = ET.SubElement(files_elem, f"{{{opex}}}File", type=type)
+        content = subelem(files_elem, opex, 'File', type=type)
         content.text = filename
 
-    folders_elem = ET.SubElement(manifest_elem, f"{{{opex}}}Folders")
+    folders_elem = subelem(manifest_elem, opex, 'Folders')
 
     for dirname, dir in dirs.items():
-        folder = ET.SubElement(folders_elem, f"{{{opex}}}Folder")
+        folder = subelem(folders_elem, opex, 'Folder')
         folder.text = dirname
 
-    output_properties(root_elem, name, len(dirs) == 0)
+    output_properties(root_elem, id, len(dirs) == 0)
 
     root_tree = ET.ElementTree(element=root_elem)
     ET.indent(root_tree)

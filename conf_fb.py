@@ -5,6 +5,17 @@ from os.path import exists
 
 GET_ID_EXT = re.compile(r'((FB(?:-\d+)+)-\d\d\d+)\.([0-9a-zA-Z_]+)$')
 
+working_dir = 'working'
+
+
+def to_calm_id(name):
+    # CALM ids user forward slah, not dash
+    return re.sub('-', '/', name)
+
+
+def get_id_for_dir(dir):
+    return to_calm_id(dir)
+
 
 def get_info_for_file(path):
 
@@ -30,8 +41,7 @@ def get_info_for_file(path):
 
     info = AssetInfo(
         filename=asset_id + '.' + ext,
-        # CALM ids use forward slash, not dash
-        asset_id=re.sub('-', '/', asset_id),
+        asset_id=to_calm_id(asset_id),
         source_path=path,
         target=[parent, asset_id],
         is_access="Preservica_access" in path,

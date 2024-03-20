@@ -26,7 +26,7 @@ def main(argv):
 
     to_upload = Dir()
 
-    working_dir = "working"
+    working_dir = conf.working_dir
 
     for source in sources:
         print(f"in source {source}")
@@ -38,9 +38,11 @@ def main(argv):
                 if info:
                     # We have something to upload
                     to_upload.add(info.target, info)
+
+                    # And also the associated metadata
                     opex_data = opex_generator.output_file(info)
                     opex_filename = info.filename + '.opex'
-                    opex_filepath = working_dir + '/' + opex_filename
+                    opex_filepath = os.path.join(working_dir, opex_filename)
                     opex_data.write(opex_filepath)
                     opex_info = AssetInfo(opex_filename, None, opex_filepath,
                                           info.target, False, False, None,
@@ -48,9 +50,11 @@ def main(argv):
                     to_upload.add(info.target, opex_info)
 
     for dirname, dir in to_upload.all_subdirs():
-        opex_data = opex_generator.output_dir(dirname, dir.subdirs, dir.files)
+        opex_data = opex_generator.output_dir(dirname,
+                                              conf.get_id_for_dir(dirname),
+                                              dir.subdirs, dir.files)
         opex_filename = dirname + '.opex'
-        opex_filepath = working_dir + '/' + opex_filename
+        opex_filepath = os.path.join(working_dir, opex_filename)
         opex_data.write(opex_filepath)
         opex_info = AssetInfo(opex_filename, None, opex_filepath,
                               info.target, False, False, None, None, True)
