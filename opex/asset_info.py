@@ -24,14 +24,13 @@ class Dir:
     def add(self, path, file):
         first, *rest = path
 
-        if not rest:
-            self.files[file.filename] = file
-            return
-
         if first not in self.subdirs:
             self.subdirs[first] = Dir(first)
 
-        self.subdirs[first].add(rest, file)
+        if rest:
+            self.subdirs[first].add(rest, file)
+        else:
+            self.subdirs[first].files[file.filename] = file
 
     def all_subdirs(self):
         doing = self.subdirs.items()

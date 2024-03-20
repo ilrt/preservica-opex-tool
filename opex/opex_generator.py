@@ -10,6 +10,8 @@ import hashlib
 
 opex = "http://www.openpreservationexchange.org/opex/v1.0"
 ET.register_namespace("opex", opex)
+legacy = "http://preservica.com/LegacyXIP"
+ET.register_namespace("legacyxip", legacy)
 
 
 def output_properties(root_elem, name, not_virtual):
@@ -25,11 +27,11 @@ def output_properties(root_elem, name, not_virtual):
                       type='code')
 
     dm = subelem(root_elem, opex, 'DescriptiveMetadata')
-    lx = subelem(dm, 'legacy', 'LegacyXIP')
+    lx = subelem(dm, legacy, 'LegacyXIP')
     if not_virtual:
-        subelem(lx, 'legacy', 'AccessionRef', 'catalogue')
+        subelem(lx, legacy, 'AccessionRef', 'catalogue')
     else:
-        subelem(lx, 'legacy', 'Virtual', 'true')
+        subelem(lx, legacy, 'Virtual', 'true')
 
 
 def output_dir(name, dirs, files):
