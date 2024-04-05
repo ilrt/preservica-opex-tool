@@ -7,7 +7,6 @@ class AssetInfo:
     filename: str
     asset_id: str
     source_path: str
-    target: object
     is_access: bool
     is_preservation: bool
     fixity_type: str
@@ -32,19 +31,21 @@ class DirInfo:
 
 class Dir:
 
-    def __init__(self, name: str = None, dir_id: str = None):
+    def __init__(self, name: str = None, dir_id: str = None, parent = None):
+        self.parent = parent
         self.name = name
         self.subdirs = {}
-        self.files = {}
-        self.access_files = {}
-        self.preservation_files = {}
+        self.files = []
+        self.access_files = []
+        self.preservation_files = []
         self.dir_id = dir_id
 
     def add(self, path: list[DirInfo], fileinfo):
         first, *rest = path
 
         if first.dirname not in self.subdirs:
-            self.subdirs[first.dirname] = Dir(first.dirname, first.dir_id)
+            self.subdirs[first.dirname] = Dir(first.dirname, first.dir_id,
+                                              self)
 
         if rest:
             self.subdirs[first.dirname].add(rest, fileinfo)
@@ -53,11 +54,11 @@ class Dir:
 
     def add_file(self, fileinfo):
         if fileinfo.is_preservation:
-            self.preservation_files[fileinfo.filename] = fileinfo
+            self.preservation_files.append(fileinfo)
         elif fileinfo.is_access:
-            self.access_files[fileinfo.filename] = fileinfo
+            self.access_files.append(fileinfo)
         else:
-            self.files[fileinfo.filename] = fileinfo
+            self.files.append(fileinfo)
 
     def all_subdirs(self):
         doing = self.subdirs.items()
@@ -74,6 +75,12 @@ class Dir:
 
     def is_complex(self):
         return self.access_files or self.preservation_files
+
+    def path(self):
+        if self.parent:
+            return self.parent.path() + '/' + self.name
+        else:
+            return ''
 
 
 def elem(ns, tag):

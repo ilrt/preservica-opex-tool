@@ -100,15 +100,15 @@ def create_xip(dir):
     create_content(root_elem, ref_id, pres_content_id, 'Presentation content')
     create_content(root_elem, ref_id, acc_content_id, 'Access content')
 
-    create_generation(root_elem, dir.preservation_files.values(), pres_content_id,
+    create_generation(root_elem, dir.preservation_files, pres_content_id,
                       is_pres=True)
-    create_generation(root_elem, dir.access_files.values(), acc_content_id,
+    create_generation(root_elem, dir.access_files, acc_content_id,
                       is_pres=False)
 
-    for fileinfo in dir.preservation_files.values():
+    for fileinfo in dir.preservation_files:
         create_bitstream(root_elem, fileinfo)
 
-    for fileinfo in dir.access_files.values():
+    for fileinfo in dir.access_files:
         create_bitstream(root_elem, fileinfo)
 
     root_tree = ET.ElementTree(element=root_elem)
@@ -124,12 +124,13 @@ def create_pax(dir, zip_path):
 
     xip = create_xip(dir)
 
-    zip.writestr(dir.dir_id + '.xip', ET.tostring(xip.getroot(), encoding='utf-8'))
+    zip.writestr(dir.dir_id + '.xip', ET.tostring(xip.getroot(),
+                                                  encoding='utf-8'))
 
-    for fileinfo in dir.preservation_files.values():
+    for fileinfo in dir.preservation_files:
         zip.write(fileinfo.source_path, '/'.join(zip_location(fileinfo)))
 
-    for fileinfo in dir.access_files.values():
+    for fileinfo in dir.access_files:
         zip.write(fileinfo.source_path, '/'.join(zip_location(fileinfo)))
 
     zip.close()

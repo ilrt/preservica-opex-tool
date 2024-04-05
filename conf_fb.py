@@ -18,13 +18,13 @@ def get_info_for_file(path):
     match = GET_ID_EXT.search(path)
 
     if not match:
-        return None
+        return None, None
 
     parent, asset_id, ext = match.group(2), match.group(1), match.group(3)
 
     if ext in ['md5']:
         # Not a file type we care about
-        return None
+        return None, None
 
     md5file = path.replace(ext, 'md5')
 
@@ -35,17 +35,17 @@ def get_info_for_file(path):
         fixity_type = None
         fixity = None
 
+    # Map names to ids
     target = [DirInfo(name, to_calm_id(name)) for name in [parent, asset_id]]
 
     info = AssetInfo(
         filename=asset_id + '.' + ext,
         asset_id=to_calm_id(asset_id),
         source_path=path,
-        target=target,
         is_access="Preservica_access" in path,
         is_preservation="Preservica_preservation" in path,
         fixity_type=fixity_type,
         fixity=fixity
     )
 
-    return info
+    return target, info

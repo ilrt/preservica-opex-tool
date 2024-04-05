@@ -33,29 +33,29 @@ def output_properties(root_elem, id, not_virtual):
         subelem(lx, legacy, 'Virtual', 'true')
 
 
-def output_dir(name, id, dirs, files):
+def output_dir(dir):
 
     root_elem = elem(opex, 'OPEXMetadata')
     transfer = subelem(root_elem, opex, 'Transfer')
 
     manifest_elem = subelem(transfer, opex, 'Manifest')
     files_elem = subelem(manifest_elem, opex, 'Files')
-    for filename, fileinfo in files.items():
+    for fileinfo in dir.files:
         if fileinfo.is_metadata:
             type = 'metadata'
         else:
             type = 'content'
 
         content = subelem(files_elem, opex, 'File', type=type)
-        content.text = filename
+        content.text = fileinfo.filename
 
     folders_elem = subelem(manifest_elem, opex, 'Folders')
 
-    for dirname, dir in dirs.items():
+    for dirname, subdir in dir.subdirs.items():
         folder = subelem(folders_elem, opex, 'Folder')
         folder.text = dirname
 
-    output_properties(root_elem, id, len(dirs) == 0)
+    output_properties(root_elem, dir.dir_id, dir.is_leaf())
 
     root_tree = ET.ElementTree(element=root_elem)
     ET.indent(root_tree)

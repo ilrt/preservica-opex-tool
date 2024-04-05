@@ -53,11 +53,11 @@ def main(argv):
         for root, dirs, files in os.walk(source):
 
             for file in files:
-                info = conf.get_info_for_file(os.path.join(root, file))
+                target, info = conf.get_info_for_file(os.path.join(root, file))
 
                 if info:
                     # We have something to upload
-                    to_upload.add(info.target, info)
+                    to_upload.add(target, info)
 
                     # And also the associated metadata if this is a 
                     # 'simple' asset (no versions)
@@ -67,21 +67,18 @@ def main(argv):
                         opex_filepath = os.path.join(working_dir, opex_filename)
                         opex_data.write(opex_filepath)
                         opex_info = AssetInfo(opex_filename, None, opex_filepath,
-                                              info.target, False, False, None,
-                                              None, True)
-                        to_upload.add(info.target, opex_info)
+                                              False, False, None, None, True)
+                        to_upload.add(target, opex_info)
 
     for dirname, dir in to_upload.all_subdirs():
 
-        opex_data = opex_generator.output_dir(dirname,
-                                              dir.dir_id,
-                                              dir.subdirs, dir.files)
+        opex_data = opex_generator.output_dir(dir)
         opex_filename = dirname + '.opex'
         opex_filepath = os.path.join(working_dir, opex_filename)
         opex_data.write(opex_filepath)
         opex_info = AssetInfo(opex_filename, None, opex_filepath,
-                              info.target, False, False, None, None, True)
-        to_upload.add(info.target, opex_info)
+                              False, False, None, None, True)
+        dir.add_file(opex_info)
 
         if dir.is_complex():
             # We will generate a pax
@@ -99,11 +96,10 @@ def main(argv):
             opex_filepath = os.path.join(working_dir, opex_filename)
             opex_data.write(opex_filepath)
             opex_info = AssetInfo(opex_filename, None, opex_filepath,
-                                  None, False, False, None,
-                                  None, True)
+                                  False, False, None, None, True)
 
             dir.add_file(opex_info)
 
     for dirname, dir in to_upload.all_subdirs():
-        for filename, fileinfo in dir.files.items():
-            print(f"Upload {fileinfo.source_path} to {fileinfo.target}")
+        for fileinfo in dir.files:
+            print(f"Upload {fileinfo.source_path} to {dir.path()}")
