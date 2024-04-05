@@ -2,8 +2,9 @@ import importlib.util
 import sys
 import os
 import os.path
-from opex.asset_info import Dir, AssetInfo
+from opex.util import Dir, AssetInfo
 import opex.opex_generator as opex_generator
+import opex.pax_generator as pax_generator
 
 
 def load_module(file_name, module_name):
@@ -12,6 +13,25 @@ def load_module(file_name, module_name):
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
+
+
+# Find files which are access or preservation copies
+# and make a pax
+def collect_pax_items(files):
+    pax_items = []
+    for filename, fileinfo in files:
+        if fileinfo.is_access or fileinfo.is_preservation:
+            pax_items.append(fileinfo)
+            del files[filename]  # Remove this file, it will be part of zip
+
+    if not pax_items:
+        return
+
+    # Make in memory pax xml
+
+    # Make zip containing files and pax xml in working dir
+
+    # Add pax to files
 
 
 def main(argv):
@@ -39,19 +59,22 @@ def main(argv):
                     # We have something to upload
                     to_upload.add(info.target, info)
 
-                    # And also the associated metadata
-                    opex_data = opex_generator.output_file(info)
-                    opex_filename = info.filename + '.opex'
-                    opex_filepath = os.path.join(working_dir, opex_filename)
-                    opex_data.write(opex_filepath)
-                    opex_info = AssetInfo(opex_filename, None, opex_filepath,
-                                          info.target, False, False, None,
-                                          None, True)
-                    to_upload.add(info.target, opex_info)
+                    # And also the associated metadata if this is a 
+                    # 'simple' asset (no versions)
+                    if info.is_simple():
+                        opex_data = opex_generator.output_file(info)
+                        opex_filename = info.filename + '.opex'
+                        opex_filepath = os.path.join(working_dir, opex_filename)
+                        opex_data.write(opex_filepath)
+                        opex_info = AssetInfo(opex_filename, None, opex_filepath,
+                                              info.target, False, False, None,
+                                              None, True)
+                        to_upload.add(info.target, opex_info)
 
     for dirname, dir in to_upload.all_subdirs():
+
         opex_data = opex_generator.output_dir(dirname,
-                                              conf.get_id_for_dir(dirname),
+                                              dir.dir_id,
                                               dir.subdirs, dir.files)
         opex_filename = dirname + '.opex'
         opex_filepath = os.path.join(working_dir, opex_filename)
@@ -59,6 +82,27 @@ def main(argv):
         opex_info = AssetInfo(opex_filename, None, opex_filepath,
                               info.target, False, False, None, None, True)
         to_upload.add(info.target, opex_info)
+
+        if dir.is_complex():
+            # We will generate a pax
+            pax_filename = dir.name + '.pax.zip'
+            zip_path = os.path.join(working_dir, pax_filename)
+            pax_generator.create_pax(dir, zip_path)
+
+            pax_info = AssetInfo(pax_filename, None, zip_path, None,
+                                 False, None, None, False)
+
+            dir.add_file(pax_info)
+
+            opex_data = opex_generator.output_file(pax_info)
+            opex_filename = pax_info.filename + '.opex'
+            opex_filepath = os.path.join(working_dir, opex_filename)
+            opex_data.write(opex_filepath)
+            opex_info = AssetInfo(opex_filename, None, opex_filepath,
+                                  None, False, False, None,
+                                  None, True)
+
+            dir.add_file(opex_info)
 
     for dirname, dir in to_upload.all_subdirs():
         for filename, fileinfo in dir.files.items():
