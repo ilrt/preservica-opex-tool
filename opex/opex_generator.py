@@ -7,6 +7,7 @@ import uuid
 import sys
 import datetime
 import hashlib
+from opex.util import elem, subelem
 
 opex = "http://www.openpreservationexchange.org/opex/v1.0"
 ET.register_namespace("opex", opex)
@@ -93,16 +94,3 @@ def output_file(file_info):
     root_tree = ET.ElementTree(element=root_elem)
     ET.indent(root_tree)
     return root_tree
-
-
-def elem(ns, tag):
-    return ET.Element(f"{{{ns}}}{tag}")
-
-
-def subelem(parent, ns, tag, text=None, **kwargs):
-    elem = ET.SubElement(parent, f"{{{ns}}}{tag}", **kwargs)
-
-    if text:
-        elem.text = text
-
-    return elem
