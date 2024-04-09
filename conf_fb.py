@@ -1,5 +1,5 @@
 # franko b config
-from opex.util import AssetInfo, DirInfo
+from opex.util import AssetInfo
 import re
 from os.path import exists
 
@@ -36,7 +36,7 @@ def get_info_for_file(path):
         fixity = None
 
     # Map names to ids
-    target = [DirInfo(name, to_calm_id(name)) for name in [parent, asset_id]]
+    target = [(name, to_calm_id(name)) for name in [parent, asset_id]]
 
     info = AssetInfo(
         filename=asset_id + '.' + ext,

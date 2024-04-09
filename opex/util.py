@@ -17,21 +17,9 @@ class AssetInfo:
         return not (self.is_access or self.is_preservation)
 
 
-@dataclass
-class DirInfo:
-    dirname: str
-    dir_id: str
-
-    def __init__(self, dirname: str, dir_id: str = None):
-        if not dir_id:
-            dir_id = dirname
-        self.dir_id = dir_id
-        self.dirname = dirname
-
-
 class Dir:
 
-    def __init__(self, name: str = None, dir_id: str = None, parent = None):
+    def __init__(self, name: str = None, dir_id: str = None, parent=None):
         self.parent = parent
         self.name = name
         self.subdirs = {}
@@ -40,17 +28,23 @@ class Dir:
         self.preservation_files = []
         self.dir_id = dir_id
 
-    def add(self, path: list[DirInfo], fileinfo):
+    def add(self, path: list, fileinfo):
         first, *rest = path
 
-        if first.dirname not in self.subdirs:
-            self.subdirs[first.dirname] = Dir(first.dirname, first.dir_id,
-                                              self)
+        # Two options: simple path a,b,c
+        # or (a, a_id), (b, b_id), (c, c_id)
+        if type(first) is tuple:
+            dirname, dir_id = first
+        else:
+            dirname = dir_id = first
+
+        if dirname not in self.subdirs:
+            self.subdirs[dirname] = Dir(dirname, dir_id, self)
 
         if rest:
-            self.subdirs[first.dirname].add(rest, fileinfo)
+            self.subdirs[dirname].add(rest, fileinfo)
         else:
-            self.subdirs[first.dirname].add_file(fileinfo)
+            self.subdirs[dirname].add_file(fileinfo)
 
     def add_file(self, fileinfo):
         if fileinfo.is_preservation:
