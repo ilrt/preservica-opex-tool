@@ -100,6 +100,14 @@ def main(argv):
 
             dir.add_file(opex_info)
 
-    for dirname, dir in to_upload.all_subdirs():
-        for fileinfo in dir.files:
-            print(f"Upload {fileinfo.source_path} to {dir.path()}")
+    uploads_file = os.path.join(working_dir, "to_upload.txt")
+
+    with open(uploads_file, "w") as f:
+        for dirname, dir in to_upload.all_subdirs():
+            for fileinfo in dir.files:
+                f.write(fileinfo.source_path)
+                f.write("\t")
+                f.write(dir.path() + '/' + fileinfo.filename)
+                f.write('\n')
+
+    print(f"Upload list is: {uploads_file}")

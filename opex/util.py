@@ -68,7 +68,8 @@ class Dir:
         return not self.subdirs
 
     def is_complex(self):
-        return self.access_files or self.preservation_files
+        # If we only have 1 file (of either kind) skip the pax thing
+        return len(self.access_files) + len(self.preservation_files) > 1
 
     def path(self):
         if self.parent:
