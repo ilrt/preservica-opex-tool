@@ -51,8 +51,10 @@ class Dir:
             self.preservation_files.append(fileinfo)
         elif fileinfo.is_access:
             self.access_files.append(fileinfo)
-        else:
-            self.files.append(fileinfo)
+        
+        # TODO this is a bit of a hack to ensure the case when there is only one
+        # pres or access file works (see 'is_complex')
+        self.files.append(fileinfo)
 
     def all_subdirs(self):
         doing = self.subdirs.items()
