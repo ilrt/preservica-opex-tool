@@ -8,13 +8,9 @@ class AssetInfo:
     asset_id: str
     source_path: str
     is_access: bool
-    is_preservation: bool
     fixity_type: str
     fixity: str
     is_metadata: bool = False
-
-    def is_simple(self):
-        return not (self.is_access or self.is_preservation)
 
 
 class Dir:
@@ -47,11 +43,13 @@ class Dir:
             self.subdirs[dirname].add_file(fileinfo)
 
     def add_file(self, fileinfo):
-        if fileinfo.is_preservation:
-            self.preservation_files.append(fileinfo)
+        if fileinfo.is_metadata:
+            pass
         elif fileinfo.is_access:
             self.access_files.append(fileinfo)
-        
+        else:
+            self.preservation_files.append(fileinfo)
+
         # TODO this is a bit of a hack to ensure the case when there is only one
         # pres or access file works (see 'is_complex')
         self.files.append(fileinfo)
@@ -78,6 +76,13 @@ class Dir:
             return self.parent.path() + '/' + self.name
         else:
             return ''
+
+    def remove_file(self, fileinfo):
+        self.files.remove(fileinfo)
+        if fileinfo in self.access_files:
+            self.access_files.remove(fileinfo)
+        if fileinfo in self.preservation_files:
+            self.preservation_files.remove(fileinfo)
 
 
 def elem(ns, tag):

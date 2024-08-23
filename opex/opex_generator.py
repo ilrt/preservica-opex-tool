@@ -8,11 +8,14 @@ import sys
 import datetime
 import hashlib
 from opex.util import elem, subelem
+import logging
 
 opex = "http://www.openpreservationexchange.org/opex/v1.0"
 ET.register_namespace("opex", opex)
 legacy = "http://preservica.com/LegacyXIP"
 ET.register_namespace("legacyxip", legacy)
+
+logger = logging.getLogger(__name__)
 
 
 def output_properties(root_elem, id, not_virtual):
@@ -86,7 +89,7 @@ def output_file(file_info):
         subelem(fixities, opex, "Fixity", type=file_info.fixity_type,
                 value=file_info.fixity)
     else:
-        print(f"\t\tWarning: no fixity for {file_info.filename}")
+        logger.warn(f"No fixity for {file_info.filename}")
 
     props = subelem(root_elem, opex, 'Properties')
     subelem(props, opex, 'SecurityDescriptor', 'open')

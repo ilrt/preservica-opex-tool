@@ -4,9 +4,12 @@ import uuid
 import datetime
 import os
 from opex.util import elem, subelem
+import logging
 
 xip = "http://preservica.com/XIP/v6.3"
 ET.register_namespace("xip", xip)
+
+logger = logging.getLogger(__name__)
 
 
 def create_representation(root_elem, name, parent_id, item_id, is_pres):
@@ -73,7 +76,7 @@ def create_bitstream(root_elem, fileinfo):
         subelem(fx, xip, 'FixityAlgorithmRef', fileinfo.fixity_type)
         subelem(fx, xip, 'FixityValue', fileinfo.fixity)
     else:
-        print(f"\t\tWarning: no fixity for {fileinfo.source_path}")
+        logger.warn(f"No fixity for {fileinfo.source_path}")
 
 
 def create_xip(dir):
@@ -118,19 +121,35 @@ def create_xip(dir):
     return root_tree
 
 
-def create_pax(dir, zip_path):
+def create_pax(dir, zip_path, dry_run = False):
 
-    zip = zipfile.ZipFile(zip_path, mode='w')
+    if dry_run:
+        logger.info(f"Dry run, not creating zip {zip_path}")
+
+    if not dry_run:
+        zip = zipfile.ZipFile(zip_path, mode='w')
 
     xip = create_xip(dir)
 
-    zip.writestr(dir.dir_id + '.xip', ET.tostring(xip.getroot(),
-                                                  encoding='utf-8'))
+    if not dry_run:
+        zip.writestr(dir.name + '.xip', ET.tostring(xip.getroot(),
+                                                    encoding='utf-8'))
+
+    to_remove = []
 
     for fileinfo in dir.preservation_files:
-        zip.write(fileinfo.source_path, '/'.join(zip_location(fileinfo)))
+        if not dry_run:
+            zip.write(fileinfo.source_path, '/'.join(zip_location(fileinfo)))
+        to_remove.append(fileinfo)
 
     for fileinfo in dir.access_files:
-        zip.write(fileinfo.source_path, '/'.join(zip_location(fileinfo)))
+        if not dry_run:
+            zip.write(fileinfo.source_path, '/'.join(zip_location(fileinfo)))
+        to_remove.append(fileinfo)
 
-    zip.close()
+    # Once zipped they will be present in another form, so remove them
+    for fileinfo in to_remove:
+        dir.remove_file(fileinfo)
+
+    if not dry_run:
+        zip.close()
