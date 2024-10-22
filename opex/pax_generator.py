@@ -103,15 +103,12 @@ def create_xip(dir):
     create_content(root_elem, ref_id, pres_content_id, 'Presentation content')
     create_content(root_elem, ref_id, acc_content_id, 'Access content')
 
-    create_generation(root_elem, dir.preservation_files, pres_content_id,
+    create_generation(root_elem, dir.preservation_files(), pres_content_id,
                       is_pres=True)
-    create_generation(root_elem, dir.access_files, acc_content_id,
+    create_generation(root_elem, dir.access_files(), acc_content_id,
                       is_pres=False)
 
-    for fileinfo in dir.preservation_files:
-        create_bitstream(root_elem, fileinfo)
-
-    for fileinfo in dir.access_files:
+    for fileinfo in dir.asset_files():
         create_bitstream(root_elem, fileinfo)
 
     root_tree = ET.ElementTree(element=root_elem)
@@ -121,7 +118,7 @@ def create_xip(dir):
     return root_tree
 
 
-def create_pax(dir, zip_path, dry_run = False):
+def create_pax(dir, zip_path, dry_run=False):
 
     if dry_run:
         logger.info(f"Dry run, not creating zip {zip_path}")
@@ -137,12 +134,7 @@ def create_pax(dir, zip_path, dry_run = False):
 
     to_remove = []
 
-    for fileinfo in dir.preservation_files:
-        if not dry_run:
-            zip.write(fileinfo.source_path, '/'.join(zip_location(fileinfo)))
-        to_remove.append(fileinfo)
-
-    for fileinfo in dir.access_files:
+    for fileinfo in dir.asset_files():
         if not dry_run:
             zip.write(fileinfo.source_path, '/'.join(zip_location(fileinfo)))
         to_remove.append(fileinfo)

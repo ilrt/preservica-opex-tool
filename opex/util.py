@@ -1,5 +1,15 @@
 from dataclasses import dataclass
 import xml.etree.ElementTree as ET
+import importlib.util
+import sys
+
+
+def load_module(file_name, module_name):
+    spec = importlib.util.spec_from_file_location(module_name, file_name)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 @dataclass
@@ -20,8 +30,6 @@ class Dir:
         self.name = name
         self.subdirs = {}
         self.files = []
-        self.access_files = []
-        self.preservation_files = []
         self.dir_id = dir_id
 
     def add(self, path: list, fileinfo):
@@ -43,33 +51,27 @@ class Dir:
             self.subdirs[dirname].add_file(fileinfo)
 
     def add_file(self, fileinfo):
-        if fileinfo.is_metadata:
-            pass
-        elif fileinfo.is_access:
-            self.access_files.append(fileinfo)
-        else:
-            self.preservation_files.append(fileinfo)
-
-        # TODO this is a bit of a hack to ensure the case when there is only one
-        # pres or access file works (see 'is_complex')
         self.files.append(fileinfo)
 
     def all_subdirs(self):
+        all_subs = []
+
         doing = self.subdirs.items()
         while doing:
+            all_subs.extend(doing)  # Add all we have seen as we go
             todo = []
             for dirname, dir in doing:
-                yield dirname, dir
                 todo.extend(dir.subdirs.items())
-
             doing = todo
+
+        return all_subs
 
     def is_leaf(self):
         return not self.subdirs
 
     def is_complex(self):
         # If we only have 1 file (of either kind) skip the pax thing
-        return len(self.access_files) + len(self.preservation_files) > 1
+        return len(self.asset_files()) > 1
 
     def path(self):
         if self.parent:
@@ -79,10 +81,16 @@ class Dir:
 
     def remove_file(self, fileinfo):
         self.files.remove(fileinfo)
-        if fileinfo in self.access_files:
-            self.access_files.remove(fileinfo)
-        if fileinfo in self.preservation_files:
-            self.preservation_files.remove(fileinfo)
+
+    def access_files(self):
+        return [f for f in self.files if f.is_access and not f.is_metadata]
+
+    def preservation_files(self):
+        return [f for f in self.files if not f.is_access and not f.is_metadata]
+
+    def asset_files(self):
+        return [f for f in self.files if not f.is_metadata]
+
 
 
 def elem(ns, tag):

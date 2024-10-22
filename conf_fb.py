@@ -5,6 +5,8 @@ from os.path import exists
 
 GET_ID_EXT = re.compile(r'((FB(?:-\d+)+)-\d\d\d+)\.([0-9a-zA-Z_]+)$')
 
+CONTAINER = 'opex_wildfilm'
+
 
 def to_calm_id(name):
     # CALM ids user forward slash, not dash

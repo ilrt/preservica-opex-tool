@@ -1,23 +1,14 @@
 import importlib.util
-import sys
 import os
 import argparse
 import os.path
-from opex.util import Dir, AssetInfo
+from opex.util import Dir, AssetInfo, load_module
 import opex.opex_generator as opex_generator
 import opex.pax_generator as pax_generator
 import logging
 
 
 logger = logging.getLogger(__name__)
-
-
-def load_module(file_name, module_name):
-    spec = importlib.util.spec_from_file_location(module_name, file_name)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
 
 
 # Find files which are access or preservation copies
@@ -89,18 +80,13 @@ def main(argv):
 
                 if info:
                     # We have something to upload
-                    logger.debug(f"File will be uploaded: {file}")
+                    logger.debug(f"File will be uploaded: {file} (Access? {info.is_access})")
                     to_upload.add(target, info)
 
-    for dirname, dir in to_upload.all_subdirs():
-
-        opex_data = opex_generator.output_dir(dir)
-        opex_filename = dirname + '.opex'
-        opex_filepath = os.path.join(target_dir, opex_filename)
-        opex_data.write(opex_filepath)
-        opex_info = AssetInfo(opex_filename, None, opex_filepath,
-                              False, None, None, True)
-        dir.add_file(opex_info)
+    # We go through subdirs in reverse order (bottom up)
+    # to ensure dir opex is present in parent
+    for dirname, dir in to_upload.all_subdirs()[::-1]:
+        logger.debug(f"Making opexes or pax for {dir.path()}")
 
         if dir.is_complex():
             logger.debug(f"Dir {dir.name} has more than one file and needs to be a pax")
@@ -122,10 +108,10 @@ def main(argv):
             dir.add_file(opex_info)
         else:
             logger.debug(f"Dir {dir.name} doesn't need a pax")
-            # TODO: this is dodgy. We want to ignore metadata files
-            # Ideally get non-metadata file list (possibly empty)
-            info = dir.files[0]
-            if not info.is_metadata:
+
+            # This will either be empty or just one file
+            for info in dir.asset_files():
+                info = dir.files[0]
                 logger.debug(f"Sole file for dir: {info.filename}")
                 opex_data = opex_generator.output_file(info)
                 opex_filename = info.filename + '.opex'
@@ -134,6 +120,19 @@ def main(argv):
                 opex_info = AssetInfo(opex_filename, None, opex_filepath,
                                       False, None, None, True)
                 dir.add_file(opex_info)
+
+        # Now create opex for dir
+        logger.debug(f"Making opex for dir {dirname}")
+        opex_data = opex_generator.output_dir(dir)
+        opex_filename = dirname + '.opex'
+        opex_filepath = os.path.join(target_dir, opex_filename)
+        opex_data.write(opex_filepath)
+        opex_info = AssetInfo(opex_filename, None, opex_filepath,
+                              False, None, None, True)
+        if dir.parent:
+            dir.parent.add_file(opex_info)
+        else:
+            log.warning(f"No parent to store opex: {opex_filename}")
 
     uploads_file = os.path.join(target_dir, "to_upload.txt")
 
