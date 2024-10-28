@@ -2,6 +2,10 @@ from dataclasses import dataclass
 import xml.etree.ElementTree as ET
 import importlib.util
 import sys
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def load_module(file_name, module_name):
@@ -32,6 +36,9 @@ class Dir:
         self.files = []
         self.dir_id = dir_id
 
+    def __str__(self):
+        return f"<DIR {self.name} [{id(self)}]>"
+
     def add(self, path: list, fileinfo):
         first, *rest = path
 
@@ -53,18 +60,15 @@ class Dir:
     def add_file(self, fileinfo):
         self.files.append(fileinfo)
 
-    def all_subdirs(self):
-        all_subs = []
+    def all_subdirs(self, top_down=True):
+        if top_down:  # Visit this first
+            yield self.name, self
 
-        doing = self.subdirs.items()
-        while doing:
-            all_subs.extend(doing)  # Add all we have seen as we go
-            todo = []
-            for dirname, dir in doing:
-                todo.extend(dir.subdirs.items())
-            doing = todo
+        for name, dir in self.subdirs.items():
+            yield from dir.all_subdirs(top_down=top_down)
 
-        return all_subs
+        if not top_down:  # Visit this after descendants
+            yield self.name, self
 
     def is_leaf(self):
         return not self.subdirs

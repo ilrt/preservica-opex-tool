@@ -85,8 +85,8 @@ def main(argv):
 
     # We go through subdirs in reverse order (bottom up)
     # to ensure dir opex is present in parent
-    for dirname, dir in to_upload.all_subdirs()[::-1]:
-        logger.debug(f"Making opexes or pax for {dir.path()}")
+    for dirname, dir in to_upload.all_subdirs(top_down=False):
+        logger.debug(f"Making opexes or pax for {dir}")
 
         if dir.is_complex():
             logger.debug(f"Dir {dir.name} has more than one file and needs to be a pax")
@@ -122,6 +122,10 @@ def main(argv):
                 dir.add_file(opex_info)
 
         # Now create opex for dir
+        if not dir.parent:
+            logger.debug(f"At root, no opex needed")
+            continue
+
         logger.debug(f"Making opex for dir {dirname}")
         opex_data = opex_generator.output_dir(dir)
         opex_filename = dirname + '.opex'
@@ -129,10 +133,8 @@ def main(argv):
         opex_data.write(opex_filepath)
         opex_info = AssetInfo(opex_filename, None, opex_filepath,
                               False, None, None, True)
-        if dir.parent:
-            dir.parent.add_file(opex_info)
-        else:
-            log.warning(f"No parent to store opex: {opex_filename}")
+        logger.debug(f"Adding {opex_filename} to {dir.parent}")
+        dir.parent.add_file(opex_info)
 
     uploads_file = os.path.join(target_dir, "to_upload.txt")
 
