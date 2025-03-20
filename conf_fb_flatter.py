@@ -7,7 +7,7 @@ GET_ID_EXT = re.compile(r'((FB(?:-\d+)+)-\d\d\d+)\.([0-9a-zA-Z_]+)$')
 
 CONTAINER = 'opex_wildfilm'
 
-VIRTUAL_LEAF_DIR = False
+VIRTUAL_LEAF_DIR = True
 
 def to_calm_id(name):
     # CALM ids user forward slash, not dash
@@ -37,7 +37,7 @@ def get_info_for_file(path):
         fixity = None
 
     # Map names to ids
-    target = [(name, to_calm_id(name)) for name in [parent, asset_id]]
+    target = [(name, to_calm_id(name)) for name in [parent]]
 
     info = AssetInfo(
         filename=asset_id + '.' + ext,

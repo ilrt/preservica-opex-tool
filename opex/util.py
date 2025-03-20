@@ -95,6 +95,9 @@ class Dir:
     def asset_files(self):
         return [f for f in self.files if not f.is_metadata]
 
+    def print_tree(self):
+        pass
+
 
 
 def elem(ns, tag):

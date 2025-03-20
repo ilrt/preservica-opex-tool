@@ -99,7 +99,7 @@ def main(argv):
                                  False, None, None, False)
             dir.add_file(pax_info)
 
-            opex_data = opex_generator.output_file(pax_info)
+            opex_data = opex_generator.output_file(pax_info, conf)
             opex_filename = pax_info.filename + '.opex'
             opex_filepath = os.path.join(target_dir, opex_filename)
             opex_data.write(opex_filepath)
@@ -113,7 +113,7 @@ def main(argv):
             for info in dir.asset_files():
                 info = dir.files[0]
                 logger.debug(f"Sole file for dir: {info.filename}")
-                opex_data = opex_generator.output_file(info)
+                opex_data = opex_generator.output_file(info, conf)
                 opex_filename = info.filename + '.opex'
                 opex_filepath = os.path.join(target_dir, opex_filename)
                 opex_data.write(opex_filepath)
@@ -127,7 +127,7 @@ def main(argv):
             continue
 
         logger.debug(f"Making opex for dir {dirname}")
-        opex_data = opex_generator.output_dir(dir)
+        opex_data = opex_generator.output_dir(dir, conf)
         opex_filename = dirname + '.opex'
         opex_filepath = os.path.join(target_dir, opex_filename)
         opex_data.write(opex_filepath)

@@ -18,7 +18,7 @@ ET.register_namespace("legacyxip", legacy)
 logger = logging.getLogger(__name__)
 
 
-def output_properties(root_elem, id, not_virtual):
+def output_properties(root_elem, id, virtual):
     # This item is 'open'
     properties = subelem(root_elem, opex, 'Properties')
     sd = subelem(properties, opex, 'SecurityDescriptor')
@@ -30,13 +30,13 @@ def output_properties(root_elem, id, not_virtual):
 
     dm = subelem(root_elem, opex, 'DescriptiveMetadata')
     lx = subelem(dm, legacy, 'LegacyXIP')
-    if not_virtual:
-        subelem(lx, legacy, 'AccessionRef', 'catalogue')
-    else:
+    if virtual:
         subelem(lx, legacy, 'Virtual', 'true')
+    else:
+        subelem(lx, legacy, 'AccessionRef', 'catalogue')
 
 
-def output_dir(dir):
+def output_dir(dir, conf):
 
     root_elem = elem(opex, 'OPEXMetadata')
     transfer = subelem(root_elem, opex, 'Transfer')
@@ -58,7 +58,7 @@ def output_dir(dir):
         folder = subelem(folders_elem, opex, 'Folder')
         folder.text = dirname
 
-    output_properties(root_elem, dir.dir_id, dir.is_leaf())
+    output_properties(root_elem, dir.dir_id, conf.VIRTUAL_LEAF_DIR or not dir.is_leaf())
 
     root_tree = ET.ElementTree(element=root_elem)
     ET.indent(root_tree)
@@ -80,7 +80,7 @@ def output_pax_file(root, file):
     root_tree.write(filename + ".opex")
 
 
-def output_file(file_info):
+def output_file(file_info, conf):
 
     root_elem = elem(opex, "OPEXMetadata")
     if file_info.fixity:
@@ -91,8 +91,12 @@ def output_file(file_info):
     else:
         logger.warn(f"No fixity for {file_info.filename}")
 
-    props = subelem(root_elem, opex, 'Properties')
-    subelem(props, opex, 'SecurityDescriptor', 'open')
+    if conf.VIRTUAL_LEAF_DIR:
+        # All DIRs are virtual, put accession properties in file opex
+        output_properties(root_elem, file_info.asset_id, False)
+    else:
+        props = subelem(root_elem, opex, 'Properties')
+        subelem(props, opex, 'SecurityDescriptor', 'open')
 
     root_tree = ET.ElementTree(element=root_elem)
     ET.indent(root_tree)
