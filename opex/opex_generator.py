@@ -58,7 +58,7 @@ def output_dir(dir, conf):
         folder = subelem(folders_elem, opex, 'Folder')
         folder.text = dirname
 
-    output_properties(root_elem, dir.dir_id, conf.VIRTUAL_LEAF_DIR or not dir.is_leaf())
+    output_properties(root_elem, dir.dir_id, conf.LINK_ON_DIRS or not dir.is_leaf())
 
     root_tree = ET.ElementTree(element=root_elem)
     ET.indent(root_tree)
@@ -91,7 +91,7 @@ def output_file(file_info, conf):
     else:
         logger.warn(f"No fixity for {file_info.filename}")
 
-    if conf.VIRTUAL_LEAF_DIR:
+    if conf.LINK_ON_DIRS:
         # All DIRs are virtual, put accession properties in file opex
         output_properties(root_elem, file_info.asset_id, False)
     else:

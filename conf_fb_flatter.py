@@ -7,7 +7,7 @@ GET_ID_EXT = re.compile(r'((FB(?:-\d+)+)-\d\d\d+)\.([0-9a-zA-Z_]+)$')
 
 CONTAINER = 'opex_wildfilm'
 
-VIRTUAL_LEAF_DIR = True
+LINK_ON_DIRS = True
 
 def to_calm_id(name):
     # CALM ids user forward slash, not dash

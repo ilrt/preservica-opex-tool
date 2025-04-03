@@ -34,8 +34,8 @@ def main(argv):
 
     parser = argparse.ArgumentParser(prog='to_opex',
                                      description='Tool to prepare collections for import to preservica')
-    parser.add_argument('config', help='Config file')
-    parser.add_argument('target', help='Target folder')
+    parser.add_argument('-c', '--config', required=True, help='Config file')
+    parser.add_argument('-t', '--target', required=True, help='Target folder')
     parser.add_argument('source', nargs='+', help='Source folder(s)')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Explain what is happening')
@@ -122,19 +122,26 @@ def main(argv):
                 dir.add_file(opex_info)
 
         # Now create opex for dir
-        if not dir.parent:
-            logger.debug(f"At root, no opex needed")
-            continue
+
+        if dir.parent:
+            opex_filename = dirname + '.opex'
+            dir_to_store = dir.parent
+        else:
+            # We are creating an opex for the root
+            # Call it 'root.opex' and stash it here
+            opex_filename = 'root.opex'
+            dir_to_store = dir
 
         logger.debug(f"Making opex for dir {dirname}")
         opex_data = opex_generator.output_dir(dir, conf)
-        opex_filename = dirname + '.opex'
+        opex_filename = opex_filename
         opex_filepath = os.path.join(target_dir, opex_filename)
         opex_data.write(opex_filepath)
         opex_info = AssetInfo(opex_filename, None, opex_filepath,
                               False, None, None, True)
-        logger.debug(f"Adding {opex_filename} to {dir.parent}")
-        dir.parent.add_file(opex_info)
+
+        logger.debug(f"Adding {opex_filename} to {dir_to_store}")
+        dir_to_store.add_file(opex_info)
 
     uploads_file = os.path.join(target_dir, "to_upload.txt")
 
