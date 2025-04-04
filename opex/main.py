@@ -82,6 +82,8 @@ def main(argv):
                     # We have something to upload
                     logger.debug(f"File will be uploaded: {file} (Access? {info.is_access})")
                     to_upload.add(target, info)
+                else:
+                    logger.debug(f"Ignoring file: {file}")
 
     # We go through subdirs in reverse order (bottom up)
     # to ensure dir opex is present in parent
