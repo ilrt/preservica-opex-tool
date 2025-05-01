@@ -76,4 +76,4 @@ for source, target in timestamped_upload_plan:
     if not arguments.dry_run:
         s3_client.upload_file(source, CONTAINER, target)
 
-print(f"\nFinished. See {UPLOAD_BASE} in {CONTAINER}")
+print(f"\nFinished. See {UPLOAD_BASE}-{timestamp} in {CONTAINER}")
