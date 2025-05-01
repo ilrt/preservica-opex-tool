@@ -11,24 +11,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# Find files which are access or preservation copies
-# and make a pax
-def collect_pax_items(files):
-    pax_items = []
-    for filename, fileinfo in files:
-        pax_items.append(fileinfo)
-        del files[filename]  # Remove this file, it will be part of zip
-
-    if not pax_items:
-        return
-
-    # Make in memory pax xml
-
-    # Make zip containing files and pax xml in working dir
-
-    # Add pax to files
-
-
 def main(argv):
     argv.pop(0)  # why do I need this?
 
