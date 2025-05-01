@@ -1,55 +1,79 @@
+from test.test_bdb import dry_run
 import boto3
 import os
-import configparser 
 import argparse
-import conf_wf
+import datetime
+import sys
+from opex.util import load_module
 
-OPEX_DIR = conf_wf.working_dir
+parser = argparse.ArgumentParser(prog='upload',
+                                 description='Tool to upload files to preservica')
+parser.add_argument('-c', '--config', required=True, help='Config file')
+parser.add_argument('-t', '--target', required=True, help='The folder used as the opex target')
+parser.add_argument('-v', '--verbose', action='store_true',
+                    help='Explain what is happening')
+parser.add_argument('-d', '--dry-run', action='store_true',
+                    help="Don't actually perform any actions, for testing")
 
-# TODO - declare in config file 
-CONTAINER = 'opex_wildfilm'
+sys.argv.pop(0)  # why do I need this?
+arguments = parser.parse_args(sys.argv)
 
-# argeparse to get PUT or OPEX from CLI argument
-parser = argparse.ArgumentParser(usage="Specifiy either PUT or OPEX as argument - eg. 'python3 upload.py PUT' " )
-parser.add_argument('bucket', choices=['OPEX', 'PUT'], help="Specifiy either PUT or OPEX as argument - eg. 'python3 upload.py PUT' ")
-args = parser.parse_args()
+# Open opex conf
+conf_wf = load_module(arguments.config, "opex_config")
 
-# fetch S3 credentials from config file
-config = configparser.ConfigParser()
-config.read(os.path.expanduser('~') + '/S3.ini')
+CONTAINER = conf_wf.CONTAINER
+OPEX_DIR = arguments.target
+UPLOAD_BASE = os.path.basename(OPEX_DIR)
 
-# get correct credentials for required bucket
-ACCESS_KEY = config[args.bucket]['ACCESS_KEY']
-SECRET_KEY = config[args.bucket]['SECRET_KEY']
-BUCKET_NAME = config[args.bucket]['BUCKET_NAME']
-
-# setup s3 client for upload
-s3 = boto3.client('s3', aws_access_key_id=ACCESS_KEY, aws_secret_access_key=SECRET_KEY)
-
-# setup S3 bucket session to check structure after upload
-sesssion = boto3.Session(aws_access_key_id=config[args.bucket]['ACCESS_KEY'], aws_secret_access_key=config[args.bucket]['SECRET_KEY'])
-s3_session = sesssion.resource('s3')
-bucket = s3_session.Bucket(config[args.bucket]['BUCKET_NAME'])
-
-# function to parse line of instruction and upload  
+# function to parse line of instruction and upload
 def upload_to_s3(instruction) -> None:
     print(instruction)
     file, target = instruction.split("\t")
     print(f'Uploading {os.path.basename(file)}')
-    s3.upload_file(file, BUCKET_NAME, Key= CONTAINER + target)
-
-# Parse output from to_opex.py as text file
-with open('to_upload.txt', 'r') as instructions: instructions = {os.path.basename(line.strip().split()[0]): line.strip() for line in instructions}
-#print(instructions)
-# Fetch opex files from 'working' directory - sort in correct order 
-opex_files = os.listdir(OPEX_DIR)
-opex_files.sort(reverse=True)
-
-# upload opex file, with content following where present 
-for opex_file in opex_files:
-    upload_to_s3(instructions[opex_file])
-    if len(opex_file.split('.')) > 2: # Looks for nested file extenstion in opex file name 
-        upload_to_s3(instructions[opex_file.strip('.opex')])  # Fetch content path from dict
+    #s3.upload_file(file, BUCKET_NAME, Key= CONTAINER + target)
 
 
-# Check bucket - print tree of new upload
+def sort_key(upload_entry):
+    # Take the target path, e.g. /foo/bar/filename
+    # and prefix opexes with ' ' to ensure they are uploaded first
+    # (or '~' for last)
+    target = upload_entry[1]
+    if target.endswith('.opex'):
+        return ' ' + target # bump opexes to top
+    else:
+        return target
+
+
+# Load upload list
+def load_uploads(dir, filename):
+    upload_path = os.path.join(dir, filename)
+    with open(upload_path, 'r') as uploads:
+        upload_plan = [ line.strip().split("\t",2) for line in uploads ]
+        return sorted(upload_plan, key=sort_key)
+
+
+# Map upload plan to actual upload location with timestamp
+def map_upload(dest, timestamp):
+    if dest == '/root.opex':
+        # Special case
+        return f"/{UPLOAD_BASE}-{timestamp}.opex"
+    else:
+        return f"/{UPLOAD_BASE}-{timestamp}{dest}"
+
+upload_plan = load_uploads(OPEX_DIR, 'to_upload.txt')
+
+# We will use this to allow repeated uploads of the same material
+# without overwriting
+timestamp = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M")
+
+timestamped_upload_plan = [[i[0], map_upload(i[1], timestamp)] for i in upload_plan]
+
+# Upload
+s3_client = boto3.client('s3')
+
+for source, target in timestamped_upload_plan:
+    print(f"Upload {source}\n\tto {CONTAINER}\n\tas {target}")
+    if not arguments.dry_run:
+        s3_client.upload_file(source, CONTAINER, target)
+
+print(f"\nFinished. See {UPLOAD_BASE} in {CONTAINER}")
