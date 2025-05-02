@@ -56,7 +56,8 @@ def load_uploads(dir, filename):
 def map_upload(dest, timestamp):
     if dest == '/root.opex':
         # Special case
-        return f"/{UPLOAD_BASE}-{timestamp}.opex"
+        dest_real = dest.replace('root.opex', f"{UPLOAD_BASE}-{timestamp}.opex")
+        return f"/{UPLOAD_BASE}-{timestamp}{dest_real}"
     else:
         return f"/{UPLOAD_BASE}-{timestamp}{dest}"
 

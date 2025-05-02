@@ -109,7 +109,7 @@ def main(argv):
 
         if dir.parent:
             opex_filename = dirname + '.opex'
-            dir_to_store = dir.parent
+            dir_to_store = dir
         else:
             # We are creating an opex for the root
             # Call it 'root.opex' and stash it here
