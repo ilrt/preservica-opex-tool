@@ -1,10 +1,9 @@
-from test.test_bdb import dry_run
 import boto3
 import os
 import argparse
 import datetime
 import sys
-from opex.util import load_module
+import configparser
 
 parser = argparse.ArgumentParser(prog='upload',
                                  description='Tool to upload files to preservica')
@@ -18,10 +17,14 @@ parser.add_argument('-d', '--dry-run', action='store_true',
 sys.argv.pop(0)  # why do I need this?
 arguments = parser.parse_args(sys.argv)
 
-# Open opex conf
-conf_wf = load_module(arguments.config, "opex_config")
+# Open conf
+config = configparser.ConfigParser()
+config.read(arguments.config)
 
-CONTAINER = conf_wf.CONTAINER
+# get correct credentials for required bucket
+ACCESS_KEY = config[args.bucket]['ACCESS_KEY']
+SECRET_KEY = config[args.bucket]['SECRET_KEY']
+BUCKET_NAME = config[args.bucket]['BUCKET_NAME']
 OPEX_DIR = arguments.target
 UPLOAD_BASE = os.path.basename(OPEX_DIR)
 
@@ -70,11 +73,11 @@ timestamp = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M")
 timestamped_upload_plan = [[i[0], map_upload(i[1], timestamp)] for i in upload_plan]
 
 # Upload
-s3_client = boto3.client('s3')
+s3_client = boto3.client('s3', aws_access_key_id=ACCESS_KEY, aws_secret_access_key=SECRET_KEY)
 
 for source, target in timestamped_upload_plan:
-    print(f"Upload {source}\n\tto {CONTAINER}\n\tas {target}")
+    print(f"Upload {source}\n\tto {BUCKET_NAME}\n\tas {target}")
     if not arguments.dry_run:
-        s3_client.upload_file(source, CONTAINER, target)
+        s3_client.upload_file(source, BUCKET_NAME, target)
 
-print(f"\nFinished. See {UPLOAD_BASE}-{timestamp} in {CONTAINER}")
+print(f"\nFinished. See {UPLOAD_BASE}-{timestamp} in {BUCKET_NAME}")
