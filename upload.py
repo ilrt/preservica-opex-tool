@@ -55,7 +55,7 @@ def map_upload(dest, container, base, timestamp):
         # Special case
         dest = dest.replace('root.opex', f"{dir}.opex")
 
-    return f"/{container}/{dir}{dest}"
+    return f"{container}/{dir}{dest}"
 
 upload_plan = load_uploads(OPEX_DIR, 'to_upload.txt')
 
