@@ -61,7 +61,7 @@ upload_plan = load_uploads(OPEX_DIR, 'to_upload.txt')
 
 # We will use this to allow repeated uploads of the same material
 # without overwriting
-timestamp = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M")
+timestamp = datetime.datetime.now().strftime("%Y-%m-%dT%H%M")
 
 timestamped_upload_plan = [
     [i[0], map_upload(i[1], args.container, UPLOAD_BASE, timestamp)]
