@@ -32,6 +32,8 @@ def get_info_for_file(path):
     if exists(md5file):
         fixity_type = 'MD5'
         fixity = open(md5file, 'r').read()
+        if len(fixity) > 32:
+            fixity = re.search(r"[A-Fa-f0-9]{32}" ,fixity).group(0)
     else:
         fixity_type = None
         fixity = None
