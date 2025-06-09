@@ -23,6 +23,10 @@ args = parser.parse_args(sys.argv)
 config = configparser.ConfigParser()
 config.read(os.path.expanduser(args.config))
 
+if not args.bucket in config:
+    print(f"No bucket named {args.bucket} in config file {args.config}")
+    sys.exit(1)
+
 # get correct credentials for required bucket
 ACCESS_KEY = config[args.bucket]['ACCESS_KEY']
 SECRET_KEY = config[args.bucket]['SECRET_KEY']
@@ -49,8 +53,7 @@ def load_uploads(dir, filename):
 
 
 # Map upload plan to actual upload location with timestamp
-def map_upload(dest, container, base, timestamp):
-    dir = f"{base}-{timestamp}"  # Dir for this particular upload
+def map_upload(dest, container, dir):
     if dest == '/root.opex':
         # Special case
         dest = dest.replace('root.opex', f"{dir}.opex")
@@ -63,8 +66,10 @@ upload_plan = load_uploads(OPEX_DIR, 'to_upload.txt')
 # without overwriting
 timestamp = datetime.datetime.now().strftime("%Y-%m-%dT%H%M")
 
+upload_dir = f"{UPLOAD_BASE}-{timestamp}"  # Dir for this particular upload
+
 timestamped_upload_plan = [
-    [i[0], map_upload(i[1], args.container, UPLOAD_BASE, timestamp)]
+    [i[0], map_upload(i[1], args.container, upload_dir)]
     for i in upload_plan]
 
 # Upload
@@ -75,4 +80,4 @@ for source, target in timestamped_upload_plan:
     if not args.dry_run:
         s3_client.upload_file(source, BUCKET_NAME, target)
 
-print(f"\nFinished. See {UPLOAD_BASE}-{timestamp} in {BUCKET_NAME}/{args.container}")
+print(f"\nFinished. See {upload_dir} in {BUCKET_NAME}/{args.container}")
