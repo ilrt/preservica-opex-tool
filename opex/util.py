@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 import importlib.util
 import sys
 import logging
-
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class Dir:
         self.parent = parent
         self.name = name
         self.subdirs = {}
-        self.files = []
+        self.files = defaultdict(list)  # id -> [file(s)]
         self.dir_id = dir_id
 
     def __str__(self):
@@ -58,7 +58,7 @@ class Dir:
             self.subdirs[dirname].add_file(fileinfo)
 
     def add_file(self, fileinfo):
-        self.files.append(fileinfo)
+        self.files[fileinfo.asset_id].append(fileinfo)
 
     def all_subdirs(self, top_down=True):
         if top_down:  # Visit this first
@@ -73,10 +73,6 @@ class Dir:
     def is_leaf(self):
         return not self.subdirs
 
-    def is_complex(self):
-        # If we only have 1 file (of either kind) skip the pax thing
-        return len(self.asset_files()) > 1
-
     def path(self):
         if self.parent:
             return self.parent.path() + '/' + self.name
@@ -84,7 +80,7 @@ class Dir:
             return ''
 
     def remove_file(self, fileinfo):
-        self.files.remove(fileinfo)
+        self.files[fileinfo.asset_id].remove(fileinfo)
 
     def access_files(self):
         return [f for f in self.files if f.is_access and not f.is_metadata]
@@ -111,3 +107,22 @@ def subelem(parent, ns, tag, text=None, **kwargs):
         elem.text = text
 
     return elem
+
+
+# Work out a good name (prefix) for a number of files
+# falling back to munged id if not possible
+def pick_name(id, files: list[AssetInfo]):
+    prefix = None
+    for file_info in files:
+        file_prefix, _, _ = file_info.filename.partition('.')
+        if not prefix:
+            prefix = file_prefix
+        elif prefix != file_prefix:
+            # files don't have a common prefix, fallback
+            munged = id.replace('/', '-')  # make a filename-safe name based on id
+            logger.info(f'Failed to find common prefix for: {files}, using munged id: {munged}')
+            return munged
+
+    logger.debug(f'Found common prefix: {prefix} for pax id: {id}')
+    # If we got this far prefix is good
+    return prefix

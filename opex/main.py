@@ -2,7 +2,7 @@ import importlib.util
 import os
 import argparse
 import os.path
-from opex.util import Dir, AssetInfo, load_module
+from opex.util import Dir, AssetInfo, load_module, pick_name
 import opex.opex_generator as opex_generator
 import opex.pax_generator as pax_generator
 import logging
@@ -70,51 +70,59 @@ def main(argv):
     # We go through subdirs in reverse order (bottom up)
     # to ensure dir opex is present in parent
     for dirname, dir in to_upload.all_subdirs(top_down=False):
-        logger.debug(f"Making opexes or pax for {dir}")
+        logger.debug(f"Making opexes and paxes for {dir}")
 
-        if dir.is_complex():
-            logger.debug(f"Dir {dir.name} has more than one file and needs to be a pax")
-            # We will generate a pax
-            pax_filename = dir.name + '.pax.zip'
-            zip_path = os.path.join(target_dir, pax_filename)
-            pax_generator.create_pax(dir, zip_path, dry_run)
+        dir_contents = list(dir.files.items())  # defensive copy
 
-            pax_info = AssetInfo(pax_filename, None, zip_path,
-                                 False, None, None, False)
-            dir.add_file(pax_info)
+        for asset_id, files in dir_contents:
 
-            opex_data = opex_generator.output_file(pax_info, conf)
-            opex_filename = pax_info.filename + '.opex'
-            opex_filepath = os.path.join(target_dir, opex_filename)
-            opex_data.write(opex_filepath)
-            opex_info = AssetInfo(opex_filename, None, opex_filepath,
-                                  False, None, None, True)
-            dir.add_file(opex_info)
-        else:
-            logger.debug(f"Dir {dir.name} doesn't need a pax")
+            if not asset_id:
+                logger.warn(f'Skipping non-asset files: {files}')
 
-            # This will either be empty or just one file
-            for info in dir.asset_files():
-                info = dir.files[0]
-                logger.debug(f"Sole file for dir: {info.filename}")
+            if len(files) > 1:  # More than one file has this asset id
+                logger.debug(f"{asset_id} in dir {dir.name} has more than one file and needs to be a pax")
+                # We will generate a pax
+                pax_prefix = pick_name(asset_id, files)  # name pax based on filenames or id
+                pax_filename = pax_prefix + '.pax.zip'
+                zip_path = os.path.join(target_dir, pax_filename)
+                pax_generator.create_pax(asset_id, files, zip_path, pax_prefix, dry_run)
+
+                # Files are now all in the pax zip, so we remove them from the dir
+                dir.files.pop(asset_id)
+
+                # And now add the pax file to replace them
+                pax_info = AssetInfo(pax_filename, asset_id, zip_path,
+                                    False, None, None, False)
+                dir.add_file(pax_info)
+
+                opex_data = opex_generator.output_file(pax_info, conf)
+                opex_filename = pax_info.filename + '.opex'
+                opex_filepath = os.path.join(target_dir, opex_filename)
+                opex_data.write(opex_filepath)
+                opex_info = AssetInfo(opex_filename, None, opex_filepath,
+                                    False, None, None, True)
+                dir.add_file(opex_info)
+            else:
+                logger.debug(f"{asset_id} in dir {dir.name} doesn't need a pax")
+
+                info = files[0]  # only 1 file with this id
+                logger.debug(f"Sole file for asset {asset_id}: {info.filename}")
                 opex_data = opex_generator.output_file(info, conf)
                 opex_filename = info.filename + '.opex'
                 opex_filepath = os.path.join(target_dir, opex_filename)
                 opex_data.write(opex_filepath)
                 opex_info = AssetInfo(opex_filename, None, opex_filepath,
-                                      False, None, None, True)
+                                    False, None, None, True)
                 dir.add_file(opex_info)
 
         # Now create opex for dir
 
         if dir.parent:
             opex_filename = dirname + '.opex'
-            dir_to_store = dir
         else:
             # We are creating an opex for the root
-            # Call it 'root.opex' and stash it here
+            # Call it 'root.opex'
             opex_filename = 'root.opex'
-            dir_to_store = dir
 
         logger.debug(f"Making opex for dir {dirname}")
         opex_data = opex_generator.output_dir(dir, conf)
@@ -124,17 +132,18 @@ def main(argv):
         opex_info = AssetInfo(opex_filename, None, opex_filepath,
                               False, None, None, True)
 
-        logger.debug(f"Adding {opex_filename} to {dir_to_store}")
-        dir_to_store.add_file(opex_info)
+        logger.debug(f"Adding {opex_filename} to {dir}")
+        dir.add_file(opex_info)
 
     uploads_file = os.path.join(target_dir, "to_upload.txt")
 
     with open(uploads_file, "w") as f:
         for dirname, dir in to_upload.all_subdirs():
-            for fileinfo in dir.files:
-                f.write(fileinfo.source_path)
-                f.write("\t")
-                f.write(dir.path() + '/' + fileinfo.filename)
-                f.write('\n')
+            for asset_id, files in dir.files.items():
+                for fileinfo in files:
+                    f.write(fileinfo.source_path)
+                    f.write("\t")
+                    f.write(dir.path() + '/' + fileinfo.filename)
+                    f.write('\n')
 
     print(f"Upload list is: {uploads_file}")
