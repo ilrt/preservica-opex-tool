@@ -43,14 +43,15 @@ def output_dir(dir, conf):
 
     manifest_elem = subelem(transfer, opex, 'Manifest')
     files_elem = subelem(manifest_elem, opex, 'Files')
-    for fileinfo in dir.files:
-        if fileinfo.is_metadata:
-            type = 'metadata'
-        else:
-            type = 'content'
+    for asset_id, files in dir.files.items():
+        for fileinfo in files:
+            if fileinfo.is_metadata:
+                type = 'metadata'
+            else:
+                type = 'content'
 
-        content = subelem(files_elem, opex, 'File', type=type)
-        content.text = fileinfo.filename
+            content = subelem(files_elem, opex, 'File', type=type)
+            content.text = fileinfo.filename
 
     folders_elem = subelem(manifest_elem, opex, 'Folders')
 
@@ -58,7 +59,7 @@ def output_dir(dir, conf):
         folder = subelem(folders_elem, opex, 'Folder')
         folder.text = dirname
 
-    output_properties(root_elem, dir.dir_id, conf.LINK_ON_DIRS or not dir.is_leaf())
+    output_properties(root_elem, dir.dir_id, True)
 
     root_tree = ET.ElementTree(element=root_elem)
     ET.indent(root_tree)
@@ -91,12 +92,7 @@ def output_file(file_info, conf):
     else:
         logger.warn(f"No fixity for {file_info.filename}")
 
-    if conf.LINK_ON_DIRS:
-        # All DIRs are virtual, put accession properties in file opex
-        output_properties(root_elem, file_info.asset_id, False)
-    else:
-        props = subelem(root_elem, opex, 'Properties')
-        subelem(props, opex, 'SecurityDescriptor', 'open')
+    output_properties(root_elem, file_info.asset_id, False)
 
     root_tree = ET.ElementTree(element=root_elem)
     ET.indent(root_tree)

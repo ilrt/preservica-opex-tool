@@ -79,7 +79,7 @@ def create_bitstream(root_elem, fileinfo):
         logger.warn(f"No fixity for {fileinfo.source_path}")
 
 
-def create_xip(dir):
+def create_xip(id, files):
     """Create a xip file to go in the pax file"""
     root_elem = elem(xip, "XIP")
 
@@ -88,7 +88,7 @@ def create_xip(dir):
     ref_id = str(uuid.uuid4())
     subelem(info_obj, xip, 'Ref', ref_id)
 
-    subelem(info_obj, xip, 'Title', dir.dir_id)
+    subelem(info_obj, xip, 'Title', id)
 
     subelem(info_obj, xip, 'SecurityTag', 'open')
 
@@ -103,12 +103,15 @@ def create_xip(dir):
     create_content(root_elem, ref_id, pres_content_id, 'Preservation content')
     create_content(root_elem, ref_id, acc_content_id, 'Access content')
 
-    create_generation(root_elem, dir.preservation_files(), pres_content_id,
+    preserve_files = [f for f in files if not f.is_access]
+    access_files  = [f for f in files if f.is_access]
+
+    create_generation(root_elem, preserve_files, pres_content_id,
                       is_pres=True)
-    create_generation(root_elem, dir.access_files(), acc_content_id,
+    create_generation(root_elem, access_files, acc_content_id,
                       is_pres=False)
 
-    for fileinfo in dir.asset_files():
+    for fileinfo in files:
         create_bitstream(root_elem, fileinfo)
 
     root_tree = ET.ElementTree(element=root_elem)
@@ -118,7 +121,7 @@ def create_xip(dir):
     return root_tree
 
 
-def create_pax(dir, zip_path, dry_run=False):
+def create_pax(id, files, zip_path, pax_prefix, dry_run=False):
 
     if dry_run:
         logger.info(f"Dry run, not creating zip {zip_path}")
@@ -126,22 +129,15 @@ def create_pax(dir, zip_path, dry_run=False):
     if not dry_run:
         zip = zipfile.ZipFile(zip_path, mode='w')
 
-    xip = create_xip(dir)
+    xip = create_xip(id, files)
 
     if not dry_run:
-        zip.writestr(dir.name + '.xip', ET.tostring(xip.getroot(),
-                                                    encoding='utf-8'))
+        zip.writestr(pax_prefix + '.xip',
+                     ET.tostring(xip.getroot(), encoding='utf-8'))
 
-    to_remove = []
-
-    for fileinfo in dir.asset_files():
+    for fileinfo in files:
         if not dry_run:
             zip.write(fileinfo.source_path, '/'.join(zip_location(fileinfo)))
-        to_remove.append(fileinfo)
-
-    # Once zipped they will be present in another form, so remove them
-    for fileinfo in to_remove:
-        dir.remove_file(fileinfo)
 
     if not dry_run:
         zip.close()
