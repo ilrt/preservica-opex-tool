@@ -100,7 +100,7 @@ def create_xip(dir):
     create_representation(root_elem, 'Representation_Access',
                           ref_id, acc_content_id, is_pres=False)
 
-    create_content(root_elem, ref_id, pres_content_id, 'Presentation content')
+    create_content(root_elem, ref_id, pres_content_id, 'Preservation content')
     create_content(root_elem, ref_id, acc_content_id, 'Access content')
 
     create_generation(root_elem, dir.preservation_files(), pres_content_id,
